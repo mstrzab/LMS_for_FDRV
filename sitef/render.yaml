@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: lms-platform
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PRODAMUS_SECRET_KEY
+        sync: false
+      - key: PRODAMUS_SHOP_ID
+        sync: false
+      - key: PRODAMUS_WEBHOOK_SECRET
+        sync: false
