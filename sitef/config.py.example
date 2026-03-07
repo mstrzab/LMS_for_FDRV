@@ -1,0 +1,67 @@
+# LMS Platform Configuration
+# Copy this file to config.py and fill in your values
+
+# ==========================================
+# PRODAMUS CONFIGURATION
+# ==========================================
+
+PRODAMUS_SECRET_KEY = "YOUR_SECRET_KEY_FROM_PRODAMUS"
+PRODAMUS_SHOP_ID = "YOUR_SHOP_ID"
+PRODAMUS_WEBHOOK_SECRET = "YOUR_WEBHOOK_SECRET"
+
+# ==========================================
+# DATABASE CONFIGURATION
+# ==========================================
+
+DATABASE_PATH = "lms.db"
+
+# ==========================================
+# SERVER CONFIGURATION
+# ==========================================
+
+API_HOST = "0.0.0.0"
+API_PORT = 8000
+FLET_PORT = 8550
+
+# ==========================================
+# ADMIN CONFIGURATION
+# ==========================================
+
+ADMIN_PASSWORD = "Kon!AdminFDRV"
+
+# ==========================================
+# EMAIL CONFIGURATION (Optional)
+# ==========================================
+
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_USER = "your-email@gmail.com"
+SMTP_PASSWORD = "your-app-password"
+
+# Email templates
+EMAIL_TEMPLATES = {
+    "welcome_subject": "Добро пожаловать в LMS Platform!",
+    "welcome_body": """
+    Здравствуйте!
+    
+    Вы успешно приобрели курс "{course_title}".
+    
+    Ваши данные для входа:
+    Email: {email}
+    Пароль: {password}
+    
+    Войдите в систему: {login_url}
+    
+    Желаем успехов в обучении!
+    """
+}
+
+# ==========================================
+# CORS CONFIGURATION
+# ==========================================
+
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://localhost:8550",
+]
