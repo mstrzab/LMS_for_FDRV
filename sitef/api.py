@@ -1,5 +1,5 @@
 """
-LMS Platform - FastAPI Application
+LMS Platform - FastAPI Application  
 Minimalist design with Bebas Neue / Inter fonts
 """
 
@@ -17,10 +17,11 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from database import (
-    init_database, get_all_courses, get_course_by_id, get_course_with_lessons,
+    init_database, get_all_courses, get_course_by_id,
     create_course, create_lesson, create_homework, create_user,
     authenticate_user, get_purchased_course_ids, user_has_course_access,
-    purchase_course, update_course, delete_course
+    purchase_course, update_course, delete_course,
+    get_lessons_by_course, get_homework_by_lesson
 )
 from prodamus_integration import generate_payment_link, generate_order_id
 
@@ -48,6 +49,21 @@ app.add_middleware(
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+
+# Helper function to get course with lessons
+def get_course_with_lessons(course_id: int):
+    course = get_course_by_id(course_id)
+    if not course:
+        return None
+    lessons = get_lessons_by_course(course_id)
+    course['lessons'] = []
+    for lesson in lessons:
+        lesson_data = dict(lesson)
+        lesson_data['homework'] = get_homework_by_lesson(lesson['id'])
+        course['lessons'].append(lesson_data)
+    return course
+
 
 # Models
 class LoginRequest(BaseModel):
@@ -84,7 +100,6 @@ CSS = '''
   --color-dark-grey: #1A1A1A;
   --color-border-dark: #333333;
   --color-text-muted: #999999;
-  --color-text-muted-light: #666666;
   --font-heading: 'Bebas Neue', 'Oswald', sans-serif;
   --font-body: 'Inter', sans-serif;
   --text-hero: clamp(4rem, 12vw, 15rem);
@@ -102,12 +117,10 @@ CSS = '''
   --container-width: 1440px;
   --radius-none: 0px;
   --border-thin: 1px solid var(--color-border-dark);
-  --border-light: 1px solid rgba(0, 0, 0, 0.1);
   --transition-fast: 0.2s ease-in-out;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 html { scroll-behavior: smooth; }
 
 body {
@@ -131,14 +144,12 @@ h3 { font-size: var(--text-h3); }
 
 a { color: inherit; text-decoration: none; }
 
-/* Container */
 .container {
   max-width: var(--container-width);
   margin: 0 auto;
   padding: 0 var(--space-md);
 }
 
-/* Header */
 .header {
   position: fixed;
   top: 0;
@@ -167,7 +178,6 @@ a { color: inherit; text-decoration: none; }
 
 .logo svg { width: 32px; height: 32px; }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -220,7 +230,6 @@ a { color: inherit; text-decoration: none; }
   font-size: var(--text-small);
 }
 
-/* Hero Section */
 .hero {
   min-height: 100vh;
   display: flex;
@@ -261,14 +270,8 @@ a { color: inherit; text-decoration: none; }
   line-height: 1;
 }
 
-/* Sections */
 .section {
   padding: var(--space-xl) 0;
-}
-
-.section-dark {
-  background: var(--color-black);
-  color: var(--color-white);
 }
 
 .section-light {
@@ -283,15 +286,6 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: var(--space-lg);
 }
 
-.section-header h2 {
-  margin-bottom: 0;
-}
-
-.section-header p {
-  color: var(--color-text-muted);
-}
-
-/* Cards */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -303,7 +297,6 @@ a { color: inherit; text-decoration: none; }
   background: var(--color-black);
   color: var(--color-white);
   border: var(--border-thin);
-  border-color: var(--color-border-dark);
   padding: var(--space-md);
   transition: var(--transition-fast);
   overflow: hidden;
@@ -360,7 +353,6 @@ a { color: inherit; text-decoration: none; }
   color: var(--color-text-muted);
 }
 
-/* Forms */
 .form-group {
   margin-bottom: var(--space-sm);
 }
@@ -389,57 +381,12 @@ a { color: inherit; text-decoration: none; }
   outline: 2px solid var(--color-black);
 }
 
-/* Auth Page */
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-black);
-  color: var(--color-white);
-  padding: var(--space-md);
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 440px;
-  padding: var(--space-lg);
-  border: 1px solid var(--color-border-dark);
-}
-
-.auth-title {
-  font-size: var(--text-h2);
-  margin-bottom: var(--space-xs);
-}
-
-.auth-subtitle {
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-lg);
-}
-
 .auth-error {
   color: var(--color-red);
   font-size: var(--text-small);
   margin-bottom: var(--space-sm);
 }
 
-.auth-links {
-  margin-top: var(--space-md);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border-dark);
-  text-align: center;
-}
-
-.auth-links a {
-  color: var(--color-text-muted);
-  font-size: var(--text-small);
-}
-
-.auth-links a:hover {
-  color: var(--color-white);
-}
-
-/* Course Page */
 .course-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -510,7 +457,6 @@ a { color: inherit; text-decoration: none; }
   font-size: var(--text-small);
 }
 
-/* Homework */
 .hw-section {
   margin-top: var(--space-lg);
   padding: var(--space-md);
@@ -569,7 +515,6 @@ a { color: inherit; text-decoration: none; }
   color: var(--color-red);
 }
 
-/* Content Box */
 .content-box {
   font-size: var(--text-body);
   line-height: 1.8;
@@ -578,10 +523,6 @@ a { color: inherit; text-decoration: none; }
 .content-box h1,
 .content-box h2 {
   margin: var(--space-md) 0 var(--space-sm);
-}
-
-.content-box p {
-  margin-bottom: var(--space-sm);
 }
 
 .content-box pre {
@@ -594,14 +535,6 @@ a { color: inherit; text-decoration: none; }
   font-size: var(--text-small);
 }
 
-.content-box code {
-  background: rgba(0, 0, 0, 0.1);
-  padding: 2px 6px;
-  font-family: monospace;
-  font-size: 0.9em;
-}
-
-/* Admin */
 .admin-layout {
   display: grid;
   grid-template-columns: 250px 1fr;
@@ -647,7 +580,6 @@ a { color: inherit; text-decoration: none; }
   padding: var(--space-lg);
 }
 
-/* Table */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -658,7 +590,7 @@ a { color: inherit; text-decoration: none; }
 .table td {
   padding: var(--space-sm) var(--space-md);
   text-align: left;
-  border-bottom: var(--border-light);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
 .table th {
@@ -669,17 +601,11 @@ a { color: inherit; text-decoration: none; }
   color: var(--color-text-muted);
 }
 
-.table tr:hover td {
-  background: var(--color-off-white);
-}
-
-/* Badge */
 .badge {
   display: inline-block;
   padding: 2px 8px;
   font-size: var(--text-small);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .badge-success {
@@ -692,53 +618,6 @@ a { color: inherit; text-decoration: none; }
   color: #F59E0B;
 }
 
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  opacity: 0;
-  visibility: hidden;
-  transition: var(--transition-fast);
-}
-
-.modal-overlay.active {
-  opacity: 1;
-  visibility: visible;
-}
-
-.modal {
-  background: var(--color-white);
-  padding: var(--space-lg);
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--color-text-muted);
-}
-
-/* Spinner */
 .spinner {
   width: 40px;
   height: 40px;
@@ -752,18 +631,15 @@ a { color: inherit; text-decoration: none; }
   to { transform: rotate(360deg); }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .course-layout,
   .admin-layout {
     grid-template-columns: 1fr;
   }
-  
   .course-sidebar,
   .admin-sidebar {
     display: none;
   }
-  
   .courses-grid {
     grid-template-columns: 1fr;
   }
@@ -773,7 +649,7 @@ a { color: inherit; text-decoration: none; }
 '''
 
 # ==========================================
-# MAIN PAGE HTML
+# HTML PAGES
 # ==========================================
 
 def get_main_html():
@@ -854,487 +730,124 @@ async function loadCourses() {{
 }}
 
 function render() {{
-  // Header actions
   const headerActions = document.getElementById('header-actions');
   if (user) {{
-    headerActions.innerHTML = `
-      <span style="color: var(--color-text-muted); font-size: var(--text-small);">${{user.email}}</span>
-      <button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button>
-    `;
+    headerActions.innerHTML = '<span style="color: var(--color-text-muted); font-size: var(--text-small); margin-right: 1rem;">'+user.email+'</span><button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button>';
   }} else {{
-    headerActions.innerHTML = `
-      <button class="btn btn-outline btn-sm" onclick="showAuth()">ВОЙТИ</button>
-    `;
+    headerActions.innerHTML = '<button class="btn btn-outline btn-sm" onclick="showAuth()">ВОЙТИ</button>';
   }}
   
-  // Hero actions
-  const heroActions = document.getElementById('hero-actions');
-  heroActions.innerHTML = user 
-    ? `<button class="btn btn-primary" onclick="scrollToCourses()">ПРОДОЛЖИТЬ ОБУЧЕНИЕ</button>`
-    : `<button class="btn btn-primary" onclick="showAuth()">НАЧАТЬ ОБУЧЕНИЕ</button>`;
+  document.getElementById('hero-actions').innerHTML = user 
+    ? '<button class="btn btn-primary" onclick="scrollToCourses()">ПРОДОЛЖИТЬ ОБУЧЕНИЕ</button>'
+    : '<button class="btn btn-primary" onclick="showAuth()">НАЧАТЬ ОБУЧЕНИЕ</button>';
   
-  // Admin link
   document.getElementById('admin-link').innerHTML = localStorage.getItem('lms_admin')
-    ? `<a href="/admin" class="btn btn-outline-dark btn-sm">АДМИНКА</a>`
-    : '';
+    ? '<a href="/admin" class="btn btn-outline-dark btn-sm">АДМИНКА</a>' : '';
   
-  // Purchased section
   const purchased = courses.filter(c => purchasedIds.includes(c.id));
   document.getElementById('purchased-section').innerHTML = purchased.length > 0
-    ? `<div class="section-header"><h2>МОИ КУРСЫ</h2></div>
-       <div class="courses-grid">${{purchased.map((c, i) => renderCard(c, i, true)).join('')}}</div>
-       <div style="margin-bottom: var(--space-xl);"></div>`
+    ? '<div class="section-header"><h2>МОИ КУРСЫ</h2></div><div class="courses-grid">'+purchased.map((c,i)=>renderCard(c,i,true)).join('')+'</div><div style="margin-bottom: var(--space-xl);"></div>'
     : '';
   
-  // Courses
   const available = courses.filter(c => !purchasedIds.includes(c.id));
-  document.getElementById('courses-count').textContent = `${{available.length}} курсов`;
+  document.getElementById('courses-count').textContent = available.length + ' курсов';
   document.getElementById('courses-grid').innerHTML = available.length > 0
-    ? available.map((c, i) => renderCard(c, i + purchased.length, false)).join('')
+    ? available.map((c,i) => renderCard(c, i + purchased.length, false)).join('')
     : '<p style="color: var(--color-text-muted);">Нет доступных курсов</p>';
   
-  // Auth section
-  document.getElementById('auth-section').innerHTML = !user ? `
-    <div style="margin-top: var(--space-xl); padding: var(--space-lg); border: var(--border-thin); text-align: center;">
-      <h3>Уже купили курс?</h3>
-      <p style="color: var(--color-text-muted); margin: var(--space-sm) 0 var(--space-md);">
-        Войдите для доступа к материалам
-      </p>
-      <button class="btn btn-outline-dark" onclick="showAuth()">ВОЙТИ</button>
-    </div>
-  ` : '';
+  document.getElementById('auth-section').innerHTML = !user ? 
+    '<div style="margin-top: var(--space-xl); padding: var(--space-lg); border: var(--border-thin); text-align: center;"><h3>Уже купили курс?</h3><p style="color: var(--color-text-muted); margin: var(--space-sm) 0 var(--space-md);">Войдите для доступа к материалам</p><button class="btn btn-outline-dark" onclick="showAuth()">ВОЙТИ</button></div>' : '';
 }}
 
 function renderCard(course, index, isPurchased) {{
-  const price = course.price_rub > 0 
-    ? `${{new Intl.NumberFormat('ru-RU').format(course.price_rub)}} <span>₽</span>`
-    : 'БЕСПЛАТНО';
-  
-  return `
-    <div class="card">
-      <div class="card-number">${{String(index + 1).padStart(2, '0')}}</div>
-      <div class="card-content">
-        <h3 class="card-title">${{course.title}}</h3>
-        <p class="card-desc">${{course.description || ''}}</p>
-        <div class="card-footer">
-          <div class="card-price">${{price}}</div>
-          <button class="btn ${{isPurchased ? 'btn-primary' : 'btn-outline'}} btn-sm" 
-                  onclick="${{isPurchased ? `openCourse(${{course.id}})` : `buyCourse(${{course.id}})`}}">
-            ${{isPurchased ? 'ОТКРЫТЬ' : 'КУПИТЬ'}}
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
+  const price = course.price_rub > 0 ? new Intl.NumberFormat('ru-RU').format(course.price_rub)+' <span>₽</span>' : 'БЕСПЛАТНО';
+  return '<div class="card"><div class="card-number">'+String(index+1).padStart(2,'0')+'</div><div class="card-content"><h3 class="card-title">'+course.title+'</h3><p class="card-desc">'+(course.description||'')+'</p><div class="card-footer"><div class="card-price">'+price+'</div><button class="btn '+(isPurchased?'btn-primary':'btn-outline')+' btn-sm" onclick="'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'">'+(isPurchased?'ОТКРЫТЬ':'КУПИТЬ')+'</button></div></div></div>';
 }}
 
 function showAuth() {{
-  document.getElementById('auth-section').innerHTML = `
-    <div style="margin-top: var(--space-xl); padding: var(--space-lg); border: var(--border-thin); max-width: 400px; margin-left: auto; margin-right: auto;">
-      <h3 style="margin-bottom: var(--space-sm);">ВХОД</h3>
-      <div id="auth-error" class="auth-error hidden"></div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="auth-email" placeholder="user@example.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Пароль</label>
-        <input type="password" class="form-input" id="auth-password" placeholder="••••••••">
-      </div>
-      <button class="btn btn-primary" style="width: 100%;" onclick="login()">ВОЙТИ</button>
-      <p style="margin-top: var(--space-md); text-align: center; color: var(--color-text-muted); font-size: var(--text-small);">
-        <a href="#" onclick="showAdminLogin()" style="color: var(--color-text-muted);">Вход для администратора</a>
-      </p>
-    </div>
-  `;
+  document.getElementById('auth-section').innerHTML = '<div style="margin-top: var(--space-xl); padding: var(--space-lg); border: var(--border-thin); max-width: 400px; margin-left: auto; margin-right: auto;"><h3 style="margin-bottom: var(--space-sm);">ВХОД</h3><div id="auth-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="auth-email" placeholder="user@example.com"></div><div class="form-group"><label class="form-label">Пароль</label><input type="password" class="form-input" id="auth-password" placeholder="••••••••"></div><button class="btn btn-primary" style="width: 100%;" onclick="login()">ВОЙТИ</button><p style="margin-top: var(--space-md); text-align: center; color: var(--color-text-muted); font-size: var(--text-small);"><a href="#" onclick="showAdminLogin()" style="color: var(--color-text-muted);">Вход для администратора</a></p></div>';
 }}
 
 async function login() {{
   const email = document.getElementById('auth-email').value;
   const password = document.getElementById('auth-password').value;
   const errorEl = document.getElementById('auth-error');
-  
   try {{
-    const res = await fetch(API + '/api/auth/login', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ email, password }})
-    }});
-    
+    const res = await fetch(API+'/api/auth/login', {{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({{email,password}})}});
     const data = await res.json();
-    
-    if (res.ok) {{
-      user = data.user;
-      purchasedIds = data.purchased_ids || [];
-      localStorage.setItem('lms_user', JSON.stringify(user));
-      localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds));
-      render();
-    }} else {{
-      errorEl.textContent = data.detail || 'Ошибка входа';
-      errorEl.classList.remove('hidden');
-    }}
-  }} catch (e) {{
-    errorEl.textContent = 'Ошибка соединения';
-    errorEl.classList.remove('hidden');
-  }}
+    if (res.ok) {{ user = data.user; purchasedIds = data.purchased_ids || []; localStorage.setItem('lms_user', JSON.stringify(user)); localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds)); render(); }}
+    else {{ errorEl.textContent = data.detail || 'Ошибка входа'; errorEl.classList.remove('hidden'); }}
+  }} catch(e) {{ errorEl.textContent = 'Ошибка соединения'; errorEl.classList.remove('hidden'); }}
 }}
 
-function logout() {{
-  user = null;
-  purchasedIds = [];
-  localStorage.removeItem('lms_user');
-  localStorage.removeItem('lms_purchased');
-  localStorage.removeItem('lms_admin');
-  render();
-}}
+function logout() {{ user = null; purchasedIds = []; localStorage.removeItem('lms_user'); localStorage.removeItem('lms_purchased'); localStorage.removeItem('lms_admin'); render(); }}
 
 async function showAdminLogin() {{
   const password = prompt('Пароль администратора:');
   if (!password) return;
-  
-  const res = await fetch(API + '/api/admin/verify', {{
-    method: 'POST',
-    headers: {{ 'Content-Type': 'application/json' }},
-    body: JSON.stringify({{ password }})
-  }});
-  
-  if (res.ok) {{
-    localStorage.setItem('lms_admin', 'true');
-    window.location.href = '/admin';
-  }} else {{
-    alert('Неверный пароль');
-  }}
+  const res = await fetch(API+'/api/admin/verify', {{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({{password}})}});
+  if (res.ok) {{ localStorage.setItem('lms_admin', 'true'); window.location.href = '/admin'; }}
+  else alert('Неверный пароль');
 }}
 
 function buyCourse(id) {{
   const course = courses.find(c => c.id === id);
   if (!course) return;
-  
-  if (course.price_rub === 0) {{
-    purchasedIds.push(id);
-    localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds));
-    render();
-    return;
-  }}
-  
+  if (course.price_rub === 0) {{ purchasedIds.push(id); localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds)); render(); return; }}
   const email = prompt('Введите email для получения доступа:');
   if (!email) return;
-  
-  fetch(API + '/api/payment/create', {{
-    method: 'POST',
-    headers: {{ 'Content-Type': 'application/json' }},
-    body: JSON.stringify({{ course_id: id, email }})
-  }})
-  .then(r => r.json())
-  .then(d => {{
-    if (d.payment_url) {{
-      alert('Перенаправление на оплату');
-      window.open(d.payment_url, '_blank');
-    }}
-  }});
+  fetch(API+'/api/payment/create', {{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({{course_id:id, email}})}}).then(r=>r.json()).then(d=>{{ if(d.payment_url) {{ alert('Перенаправление на оплату'); window.open(d.payment_url, '_blank'); }} }});
 }}
 
-function openCourse(id) {{
-  window.location.href = '/course/' + id;
-}}
-
-function scrollToCourses() {{
-  document.querySelector('.section-light').scrollIntoView({{ behavior: 'smooth' }});
-}}
-
+function openCourse(id) {{ window.location.href = '/course/'+id; }}
+function scrollToCourses() {{ document.querySelector('.section-light').scrollIntoView({{behavior:'smooth'}}); }}
 init();
 </script>
 </body>
 </html>'''
 
-
-# ==========================================
-# COURSE PAGE HTML
-# ==========================================
 
 def get_course_html(course):
     lessons_json = json.dumps(course.get('lessons', []), ensure_ascii=False)
-    
     return f'''<!DOCTYPE html>
 <html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{course['title']} - LMS</title>
-<style>{CSS}</style>
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{course['title']} - LMS</title><style>{CSS}</style></head>
 <body>
-<header class="header">
-  <div class="container header-content">
-    <a href="/" class="logo">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
-      LMS
-    </a>
-    <button class="btn btn-outline btn-sm" onclick="window.location.href='/'">НАЗАД</button>
-  </div>
-</header>
-
-<div class="course-layout">
-  <aside class="course-sidebar" id="sidebar"></aside>
-  <main class="course-content" id="content"></main>
-</div>
-
+<header class="header"><div class="container header-content"><a href="/" class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>LMS</a><button class="btn btn-outline btn-sm" onclick="window.location.href='/'">НАЗАД</button></div></header>
+<div class="course-layout"><aside class="course-sidebar" id="sidebar"></aside><main class="course-content" id="content"></main></div>
 <script>
-const course = {json.dumps({'id': course['id'], 'title': course['title'], 'lessons': course.get('lessons', [])}, ensure_ascii=False)};
-let currentLesson = 0;
-
-function init() {{
-  renderSidebar();
-  if (course.lessons.length > 0) {{
-    showLesson(0);
-  }} else {{
-    document.getElementById('content').innerHTML = '<h1>Нет уроков</h1>';
-  }}
-}}
-
-function renderSidebar() {{
-  document.getElementById('sidebar').innerHTML = `
-    <h3>УРОКИ</h3>
-    ${{course.lessons.map((l, i) => `
-      <div class="lesson-item ${{i === 0 ? 'active' : ''}}" onclick="showLesson(${{i}})">
-        <div class="lesson-num">${{i + 1}}</div>
-        <div class="lesson-title">${{l.title}}</div>
-      </div>
-    `).join('')}}
-  `;
-}}
-
-function showLesson(i) {{
-  currentLesson = i;
-  document.querySelectorAll('.lesson-item').forEach((el, idx) => {{
-    el.classList.toggle('active', idx === i);
-  }});
-  
-  const l = course.lessons[i];
-  const hw = l.homework;
-  
-  let html = `<h1>${{l.title}}</h1>`;
-  html += `<p style="color: var(--color-text-muted); margin-bottom: var(--space-md);">${{l.description || ''}}</p>`;
-  
-  if (l.content_text) {{
-    html += `<div class="content-box">${{formatContent(l.content_text)}}</div>`;
-  }}
-  
-  if (hw) {{
-    const opts = hw.options || [];
-    html += `
-      <div class="hw-section">
-        <h3 class="hw-title">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/></svg>
-          ДОМАШНЕЕ ЗАДАНИЕ
-        </h3>
-        <p style="margin-bottom: var(--space-md);">${{hw.content_text || ''}}</p>
-        ${{opts.length ? `
-          <div class="hw-options">
-            ${{opts.map(o => `
-              <label class="hw-option">
-                <input type="radio" name="hw-answer" value="${{o}}" onchange="checkAnswer(this)">
-                ${{o}}
-              </label>
-            `).join('')}}
-          </div>
-          <div id="hw-result"></div>
-        ` : ''}}
-      </div>
-    `;
-  }}
-  
-  document.getElementById('content').innerHTML = html;
-}}
-
-function formatContent(text) {{
-  return text
-    .replace(/```\\w*\\n([\\s\\S]*?)```/g, '<pre><code>$1</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/## (.*)/g, '<h2>$1</h2>')
-    .replace(/# (.*)/g, '<h1>$1</h1>')
-    .replace(/\\n/g, '<br>');
-}}
-
-function checkAnswer(input) {{
-  const hw = course.lessons[currentLesson].homework;
-  document.querySelectorAll('.hw-option').forEach(el => el.classList.remove('selected'));
-  input.closest('.hw-option').classList.add('selected');
-  
-  const correct = input.value === hw.correct_answer;
-  document.getElementById('hw-result').innerHTML = correct
-    ? '<div class="hw-result correct">✅ ПРАВИЛЬНО</div>'
-    : '<div class="hw-result incorrect">❌ НЕПРАВИЛЬНО</div>';
-}}
-
+const course={json.dumps({'id':course['id'],'title':course['title'],'lessons':course.get('lessons',[])}, ensure_ascii=False)};
+let currentLesson=0;
+function init(){{renderSidebar();if(course.lessons.length>0)showLesson(0);else document.getElementById('content').innerHTML='<h1>Нет уроков</h1>';}}
+function renderSidebar(){{document.getElementById('sidebar').innerHTML='<h3>УРОКИ</h3>'+course.lessons.map((l,i)=>'<div class="lesson-item '+(i===0?'active':'')+'" onclick="showLesson('+i+')"><div class="lesson-num">'+(i+1)+'</div><div class="lesson-title">'+l.title+'</div></div>').join('');}}
+function showLesson(i){{currentLesson=i;document.querySelectorAll('.lesson-item').forEach((el,idx)=>el.classList.toggle('active',idx===i));const l=course.lessons[i];const hw=l.homework;let html='<h1>'+l.title+'</h1><p style="color:var(--color-text-muted);margin-bottom:var(--space-md);">'+(l.description||'')+'</p>';if(l.content_text)html+='<div class="content-box">'+l.content_text.replace(/```\\w*\\n([\\s\\S]*?)```/g,'<pre><code>$1</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\\n/g,'<br>')+'</div>';if(hw){{const opts=hw.options||[];html+='<div class="hw-section"><h3 class="hw-title"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/></svg>ДОМАШНЕЕ ЗАДАНИЕ</h3><p style="margin-bottom:var(--space-md);">'+(hw.content_text||'')+'</p>'+(opts.length?'<div class="hw-options">'+opts.map(o=>'<label class="hw-option"><input type="radio" name="hw-answer" value="'+o+'" onchange="checkAnswer(this)">'+o+'</label>').join('')+'</div><div id="hw-result"></div>':'')+'</div>';}}document.getElementById('content').innerHTML=html;}}
+function checkAnswer(inp){{const hw=course.lessons[currentLesson].homework;document.querySelectorAll('.hw-option').forEach(el=>el.classList.remove('selected'));inp.closest('.hw-option').classList.add('selected');document.getElementById('hw-result').innerHTML=inp.value===hw.correct_answer?'<div class="hw-result correct">✅ ПРАВИЛЬНО</div>':'<div class="hw-result incorrect">❌ НЕПРАВИЛЬНО</div>';}}
 init();
 </script>
 </body>
 </html>'''
 
-
-# ==========================================
-# ADMIN PAGE HTML
-# ==========================================
 
 def get_admin_html():
     return f'''<!DOCTYPE html>
 <html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Админка - LMS</title>
-<style>{CSS}</style>
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Админка - LMS</title><style>{CSS}</style></head>
 <body>
-<header class="header">
-  <div class="container header-content">
-    <a href="/" class="logo">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
-      LMS ADMIN
-    </a>
-    <div>
-      <a href="/" class="btn btn-outline btn-sm">НА САЙТ</a>
-      <button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button>
-    </div>
-  </div>
-</header>
-
-<div class="admin-layout">
-  <aside class="admin-sidebar">
-    <nav class="admin-nav">
-      <div class="admin-nav-item active" onclick="showSection('courses')">КУРСЫ</div>
-      <div class="admin-nav-item" onclick="showSection('new-course')">+ НОВЫЙ КУРС</div>
-    </nav>
-  </aside>
-  
-  <main class="admin-content" id="admin-content">
-    <div style="text-align: center; padding: 4rem;">
-      <div class="spinner" style="margin: 0 auto;"></div>
-    </div>
-  </main>
-</div>
-
+<header class="header"><div class="container header-content"><a href="/" class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>LMS ADMIN</a><div><a href="/" class="btn btn-outline btn-sm">НА САЙТ</a> <button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button></div></div></header>
+<div class="admin-layout"><aside class="admin-sidebar"><nav class="admin-nav"><div class="admin-nav-item active" onclick="showSection('courses')">КУРСЫ</div><div class="admin-nav-item" onclick="showSection('new-course')">+ НОВЫЙ КУРС</div></nav></aside><main class="admin-content" id="admin-content"><div style="text-align:center;padding:4rem;"><div class="spinner" style="margin:0 auto;"></div></div></main></div>
 <script>
-const API = window.location.origin;
-
-function init() {{
-  if (!localStorage.getItem('lms_admin')) {{
-    window.location.href = '/';
-    return;
-  }}
-  showSection('courses');
-}}
-
-function logout() {{
-  localStorage.clear();
-  window.location.href = '/';
-}}
-
-async function showSection(section) {{
-  document.querySelectorAll('.admin-nav-item').forEach((el, i) => {{
-    el.classList.toggle('active', i === (section === 'courses' ? 0 : 1));
-  }});
-  
-  const content = document.getElementById('admin-content');
-  
-  if (section === 'courses') {{
-    content.innerHTML = '';
-    const res = await fetch(API + '/api/courses');
-    const data = await res.json();
-    const courses = data.courses || [];
-    
-    content.innerHTML = `
-      <div class="section-header">
-        <h2>ВСЕ КУРСЫ</h2>
-        <button class="btn btn-primary btn-sm" onclick="showSection('new-course')">+ ДОБАВИТЬ</button>
-      </div>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Цена</th>
-            <th>Статус</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${{courses.map(c => `
-            <tr>
-              <td>${{c.id}}</td>
-              <td>${{c.title}}</td>
-              <td>${{c.price_rub}} ₽</td>
-              <td><span class="badge ${{c.is_published ? 'badge-success' : 'badge-warning'}}">${{c.is_published ? 'Опубликован' : 'Черновик'}}</span></td>
-            </tr>
-          `).join('')}}
-        </tbody>
-      </table>
-    `;
-  }} else if (section === 'new-course') {{
-    content.innerHTML = `
-      <h2>НОВЫЙ КУРС</h2>
-      <div style="max-width: 500px; margin-top: var(--space-md);">
-        <div id="course-error" class="auth-error hidden"></div>
-        <div class="form-group">
-          <label class="form-label">Название</label>
-          <input type="text" class="form-input" id="course-title" placeholder="Название курса">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Описание</label>
-          <textarea class="form-input" id="course-desc" rows="3" placeholder="Описание курса"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Цена (руб.)</label>
-          <input type="number" class="form-input" id="course-price" value="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">
-            <input type="checkbox" id="course-published"> Опубликован
-          </label>
-        </div>
-        <button class="btn btn-primary" onclick="createCourse()">СОЗДАТЬ</button>
-      </div>
-    `;
-  }}
-}}
-
-async function createCourse() {{
-  const title = document.getElementById('course-title').value;
-  const description = document.getElementById('course-desc').value;
-  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
-  const is_published = document.getElementById('course-published').checked;
-  
-  if (!title) {{
-    document.getElementById('course-error').textContent = 'Введите название';
-    document.getElementById('course-error').classList.remove('hidden');
-    return;
-  }}
-  
-  const res = await fetch(API + '/api/admin/courses', {{
-    method: 'POST',
-    headers: {{ 'Content-Type': 'application/json' }},
-    body: JSON.stringify({{ title, description, price_rub, is_published }})
-  }});
-  
-  if (res.ok) {{
-    showSection('courses');
-  }} else {{
-    const data = await res.json();
-    document.getElementById('course-error').textContent = data.detail || 'Ошибка';
-    document.getElementById('course-error').classList.remove('hidden');
-  }}
-}}
-
+const API=window.location.origin;
+function init(){{if(!localStorage.getItem('lms_admin')){{window.location.href='/';return;}}showSection('courses');}}
+function logout(){{localStorage.clear();window.location.href='/';}}
+async function showSection(section){{document.querySelectorAll('.admin-nav-item').forEach((el,i)=>el.classList.toggle('active',i===(section==='courses'?0:1)));const content=document.getElementById('admin-content');if(section==='courses'){{const res=await fetch(API+'/api/courses');const data=await res.json();const courses=data.courses||[];content.innerHTML='<div class="section-header"><h2>ВСЕ КУРСЫ</h2><button class="btn btn-primary btn-sm" onclick="showSection(\\'new-course\\')">+ ДОБАВИТЬ</button></div><table class="table"><thead><tr><th>ID</th><th>Название</th><th>Цена</th><th>Статус</th></tr></thead><tbody>'+courses.map(c=>'<tr><td>'+c.id+'</td><td>'+c.title+'</td><td>'+c.price_rub+' ₽</td><td><span class="badge '+(c.is_published?'badge-success':'badge-warning')+'">'+(c.is_published?'Опубликован':'Черновик')+'</span></td></tr>').join('')+'</tbody></table>';}}else if(section==='new-course'){{content.innerHTML='<h2>НОВЫЙ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" placeholder="Название курса"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3" placeholder="Описание курса"></textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="0"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published"> Опубликован</label></div><button class="btn btn-primary" onclick="createCourse()">СОЗДАТЬ</button></div>';}}}}
+async function createCourse(){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const is_published=document.getElementById('course-published').checked;if(!title){{document.getElementById('course-error').textContent='Введите название';document.getElementById('course-error').classList.remove('hidden');return;}}const res=await fetch(API+'/api/admin/courses',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,is_published}})}});if(res.ok)showSection('courses');else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}
 init();
 </script>
 </body>
 </html>'''
 
 
-# ==========================================
-# ROUTES
-# ==========================================
-
+# Routes
 @app.get("/")
 async def root():
     return HTMLResponse(content=get_main_html())
@@ -1370,10 +883,7 @@ async def api_login(data: LoginRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
     purchased_ids = get_purchased_course_ids(user['id'])
-    return {
-        "user": {"id": user['id'], "email": user['email'], "role": user['role']},
-        "purchased_ids": purchased_ids
-    }
+    return {"user": {"id": user['id'], "email": user['email'], "role": user['role']}, "purchased_ids": purchased_ids}
 
 
 @app.post("/api/admin/verify")
@@ -1385,12 +895,7 @@ async def api_admin_verify(data: AdminVerifyRequest):
 
 @app.post("/api/admin/courses")
 async def api_create_course(data: CourseCreate):
-    return create_course(
-        title=data.title,
-        description=data.description,
-        price_rub=data.price_rub,
-        is_published=data.is_published
-    )
+    return create_course(title=data.title, description=data.description, price_rub=data.price_rub, is_published=data.is_published)
 
 
 @app.post("/api/payment/create")
@@ -1398,20 +903,9 @@ async def api_payment(request: Request, data: PaymentCreate):
     course = get_course_by_id(data.course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-    
     order_id = generate_order_id(data.course_id, data.email)
     base_url = str(request.url).split('/api')[0]
-    
-    payment_url = generate_payment_link(
-        order_id=order_id,
-        product_name=course["title"],
-        price_rub=course["price_rub"],
-        customer_email=data.email,
-        course_id=data.course_id,
-        success_url=f"{base_url}/?payment=success",
-        webhook_url=f"{base_url}/prodamus-webhook"
-    )
-    
+    payment_url = generate_payment_link(order_id=order_id, product_name=course["title"], price_rub=course["price_rub"], customer_email=data.email, course_id=data.course_id, success_url=f"{base_url}/?payment=success", webhook_url=f"{base_url}/prodamus-webhook")
     return {"order_id": order_id, "payment_url": payment_url}
 
 
