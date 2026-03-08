@@ -1,5 +1,3 @@
 {
-  "buildCommand": "pip install -r requirements.txt",
-  "outputDirectory": ".",
-  "framework": null
+  "version": 2
 }
