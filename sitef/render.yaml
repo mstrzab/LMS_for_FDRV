@@ -9,9 +9,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: PRODAMUS_SECRET_KEY
-        sync: false
-      - key: PRODAMUS_SHOP_ID
-        sync: false
-      - key: PRODAMUS_WEBHOOK_SECRET
-        sync: false
+      - key: ADMIN_PASSWORD
+        value: Kon!AdminFDRV
