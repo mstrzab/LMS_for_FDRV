@@ -1,25 +1,2 @@
-# LMS Platform Requirements
-# Python 3.10+
-
-# Core Framework
-flet>=0.21.0
 fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-
-# Database
-aiosqlite>=0.19.0
-
-# HTTP Client
-aiohttp>=3.9.0
-httpx>=0.25.0
-
-# Data Validation
 pydantic>=2.5.0
-pydantic[email]>=2.5.0
-
-# Security
-python-multipart>=0.0.6
-
-# Optional: For production deployment
-# gunicorn>=21.2.0
-# redis>=5.0.0
