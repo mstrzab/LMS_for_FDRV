@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from database import (
@@ -54,8 +54,7 @@ static_dir.mkdir(exist_ok=True)
 @app.middleware("http")
 async def add_cache_headers(request, call_next):
     response = await call_next(request)
-    # Cache static files for 1 day, HTML for 1 hour
-    if "/static/" in str(request.url) or request.url.path.endswith((".css", ".js", ".png", ".jpg", ".ico")):
+    if "/static/" in str(request.url):
         response.headers["Cache-Control"] = "public, max-age=86400"
     elif "text/html" in response.headers.get("content-type", ""):
         response.headers["Cache-Control"] = "public, max-age=3600"
@@ -717,7 +716,142 @@ def get_main_html():
   </div>
 </main>
 
-<script>const API=window.location.origin;let user=null;let courses=[];let purchasedIds=[];function init(){{const saved=localStorage.getItem('lms_user');if (saved){{user=JSON.parse(saved);purchasedIds=JSON.parse(localStorage.getItem('lms_purchased')||'[]');}}loadCourses();}}async function loadCourses(){{try{{const res=await fetch(API+'/api/courses');const data=await res.json();courses=data.courses||[];render();}}catch (e){{document.getElementById('courses-grid').innerHTML='<p>Ошибка загрузки</p>';}}}}function render(){{const headerActions=document.getElementById('header-actions');if (user){{headerActions.innerHTML='<span style="color:var(--color-text-muted);font-size:var(--text-small);margin-right:1rem;">'+user.email+'</span><button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button>';}}else{{headerActions.innerHTML='<button class="btn btn-outline btn-sm" onclick="showAuth()">ВОЙТИ</button>';}}document.getElementById('hero-actions').innerHTML=user ? '<button class="btn btn-primary" onclick="scrollToCourses()">ПРОДОЛЖИТЬ ОБУЧЕНИЕ</button>':'<button class="btn btn-primary" onclick="showAuth()">НАЧАТЬ ОБУЧЕНИЕ</button>';document.getElementById('admin-link').innerHTML=localStorage.getItem('lms_admin') ? '<a href="/admin" class="btn btn-outline-dark btn-sm">АДМИНКА</a>':'';const purchased=courses.filter(c=>purchasedIds.includes(c.id));document.getElementById('purchased-section').innerHTML=purchased.length>0 ? '<div class="section-header"><h2>МОИ КУРСЫ</h2></div><div class="courses-grid">'+purchased.map((c,i)=>renderCard(c,i,true)).join('')+'</div><div style="margin-bottom:var(--space-xl);"></div>':'';const available=courses.filter(c=>!purchasedIds.includes(c.id));document.getElementById('courses-count').textContent=available.length+' курсов';document.getElementById('courses-grid').innerHTML=available.length>0 ? available.map((c,i)=>renderCard(c,i+purchased.length,false)).join(''):'<p style="color:var(--color-text-muted);">Нет доступных курсов</p>';document.getElementById('auth-section').innerHTML=!user ? '<div style="margin-top:var(--space-xl);padding:var(--space-lg);border:var(--border-thin);text-align:center;"><h3>Уже купили курс?</h3><p style="color:var(--color-text-muted);margin:var(--space-sm) 0 var(--space-md);">Войдите для доступа к материалам</p><button class="btn btn-outline-dark" onclick="showAuth()">ВОЙТИ</button></div>':'';}}function renderCard(course,index,isPurchased){{const price=course.price_rub>0 ? new Intl.NumberFormat('ru-RU').format(course.price_rub)+'<span>₽</span>':'БЕСПЛАТНО';return '<div class="card" onclick="'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'" style="cursor:pointer"><div class="card-number">'+String(index+1).padStart(2,'0')+'</div><div class="card-content"><h3 class="card-title">'+course.title+'</h3><p class="card-desc">'+(course.description||'')+'</p><div class="card-footer"><div class="card-price">'+price+'</div><button class="btn '+(isPurchased?'btn-primary':'btn-outline')+' btn-sm" onclick="event.stopPropagation();'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'">'+(isPurchased?'ОТКРЫТЬ':'КУПИТЬ')+'</button></div></div></div>';}}function showAuth(){{document.getElementById('auth-section').innerHTML='<div style="margin-top:var(--space-xl);padding:var(--space-lg);border:var(--border-thin);max-width:400px;margin-left:auto;margin-right:auto;"><h3 style="margin-bottom:var(--space-sm);">ВХОД</h3><div id="auth-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="auth-email" placeholder="user@example.com"></div><div class="form-group"><label class="form-label">Пароль</label><input type="password" class="form-input" id="auth-password" placeholder="••••••••"></div><button class="btn btn-primary" style="width:100%;" onclick="login()">ВОЙТИ</button><p style="margin-top:var(--space-md);text-align:center;color:var(--color-text-muted);font-size:var(--text-small);"><a href="#" onclick="showAdminLogin()" style="color:var(--color-text-muted);">Вход для администратора</a></p></div>';}}async function login(){{const email=document.getElementById('auth-email').value;const password=document.getElementById('auth-password').value;const errorEl=document.getElementById('auth-error');try{{const res=await fetch(API+'/api/auth/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email,password}})}});const data=await res.json();if (res.ok){{user=data.user;purchasedIds=data.purchased_ids||[];localStorage.setItem('lms_user',JSON.stringify(user));localStorage.setItem('lms_purchased',JSON.stringify(purchasedIds));render();}}else{{errorEl.textContent=data.detail||'Ошибка входа';errorEl.classList.remove('hidden');}}}}catch(e){{errorEl.textContent='Ошибка соединения';errorEl.classList.remove('hidden');}}}}function logout(){{user=null;purchasedIds=[];localStorage.removeItem('lms_user');localStorage.removeItem('lms_purchased');localStorage.removeItem('lms_admin');render();}}async function showAdminLogin(){{const password=prompt('Пароль администратора:');if (!password) return;const res=await fetch(API+'/api/admin/verify',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{password}})}});if (res.ok){{localStorage.setItem('lms_admin','true');window.location.href='/admin';}}else alert('Неверный пароль');}}function buyCourse(id){{const course=courses.find(c=>c.id===id);if (!course) return;if (course.price_rub===0){{purchasedIds.push(id);localStorage.setItem('lms_purchased',JSON.stringify(purchasedIds));render();return;}}const email=prompt('Введите email для получения доступа:');if (!email) return;fetch(API+'/api/payment/create',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{course_id:id,email}})}}).then(r=>r.json()).then(d=>{{if(d.payment_url){{alert('Перенаправление на оплату');window.open(d.payment_url,'_blank');}}}});}}function openCourse(id){{window.location.href='/course/'+id;}}async function editCourse(id){{const res=await fetch(API+'/api/courses/'+id);const course=await res.json();if (!course) return;const content=document.getElementById('admin-content');content.innerHTML='<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'>Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button><button class="btn btn-outline" onclick="showSection(\'courses\')">ОТМЕНА</button></div>';}}async function updateCourse(id){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const payment_link=document.getElementById('course-payment-link').value;const is_published=document.getElementById('course-published').checked;const res=await fetch(API+'/api/admin/courses/'+id,{{method:'PUT',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,payment_link,is_published}})}});if (res.ok){{showSection('courses');}}else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}async function deleteCourse(id){{if (!confirm('Удалить курс?')) return;const res=await fetch(API+'/api/admin/courses/'+id,{{method:'DELETE'}});if (res.ok) showSection('courses');}}function scrollToCourses(){{document.querySelector('.section-light').scrollIntoView({{behavior:'smooth'}});}}init();</script>
+<script>
+const API = window.location.origin;
+let user = null;
+let courses = [];
+let purchasedIds = [];
+
+function init() {{
+  const saved = localStorage.getItem('lms_user');
+  if (saved) {{
+    user = JSON.parse(saved);
+    purchasedIds = JSON.parse(localStorage.getItem('lms_purchased') || '[]');
+  }}
+  loadCourses();
+}}
+
+async function loadCourses() {{
+  try {{
+    const res = await fetch(API + '/api/courses');
+    const data = await res.json();
+    courses = data.courses || [];
+    render();
+  }} catch (e) {{
+    document.getElementById('courses-grid').innerHTML = '<p>Ошибка загрузки</p>';
+  }}
+}}
+
+function render() {{
+  const headerActions = document.getElementById('header-actions');
+  if (user) {{
+    headerActions.innerHTML = '<span style="color: var(--color-text-muted); font-size: var(--text-small); margin-right: 1rem;">'+user.email+'</span><button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button>';
+  }} else {{
+    headerActions.innerHTML = '<button class="btn btn-outline btn-sm" onclick="showAuth()">ВОЙТИ</button>';
+  }}
+  
+  document.getElementById('hero-actions').innerHTML = user 
+    ? '<button class="btn btn-primary" onclick="scrollToCourses()">ПРОДОЛЖИТЬ ОБУЧЕНИЕ</button>'
+    : '<button class="btn btn-primary" onclick="showAuth()">НАЧАТЬ ОБУЧЕНИЕ</button>';
+  
+  document.getElementById('admin-link').innerHTML = localStorage.getItem('lms_admin')
+    ? '<a href="/admin" class="btn btn-outline-dark btn-sm">АДМИНКА</a>' : '';
+  
+  const purchased = courses.filter(c => purchasedIds.includes(c.id));
+  document.getElementById('purchased-section').innerHTML = purchased.length > 0
+    ? '<div class="section-header"><h2>МОИ КУРСЫ</h2></div><div class="courses-grid">'+purchased.map((c,i)=>renderCard(c,i,true)).join('')+'</div><div style="margin-bottom: var(--space-xl);"></div>'
+    : '';
+  
+  const available = courses.filter(c => !purchasedIds.includes(c.id));
+  document.getElementById('courses-count').textContent = available.length + ' курсов';
+  document.getElementById('courses-grid').innerHTML = available.length > 0
+    ? available.map((c,i) => renderCard(c, i + purchased.length, false)).join('')
+    : '<p style="color: var(--color-text-muted);">Нет доступных курсов</p>';
+  
+  document.getElementById('auth-section').innerHTML = !user ? 
+    '<div style="margin-top: var(--space-xl); padding: var(--space-lg); border: var(--border-thin); text-align: center;"><h3>Уже купили курс?</h3><p style="color: var(--color-text-muted); margin: var(--space-sm) 0 var(--space-md);">Войдите для доступа к материалам</p><button class="btn btn-outline-dark" onclick="showAuth()">ВОЙТИ</button></div>' : '';
+}}
+
+function renderCard(course, index, isPurchased) {{
+  const price = course.price_rub > 0 ? new Intl.NumberFormat('ru-RU').format(course.price_rub)+' <span>₽</span>' : 'БЕСПЛАТНО';
+  return '<div class="card" onclick="'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'" style="cursor:pointer"><div class="card-number">'+String(index+1).padStart(2,'0')+'</div><div class="card-content"><h3 class="card-title">'+course.title+'</h3><p class="card-desc">'+(course.description||'')+'</p><div class="card-footer"><div class="card-price">'+price+'</div><button class="btn '+(isPurchased?'btn-primary':'btn-outline')+' btn-sm" onclick="event.stopPropagation();'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'">'+(isPurchased?'ОТКРЫТЬ':'КУПИТЬ')+'</button></div></div></div>';
+}}
+
+function showAuth() {{
+  document.getElementById('auth-section').innerHTML = '<div style="margin-top: var(--space-xl); padding: var(--space-lg); border: var(--border-thin); max-width: 400px; margin-left: auto; margin-right: auto;"><h3 style="margin-bottom: var(--space-sm);">ВХОД</h3><div id="auth-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="auth-email" placeholder="user@example.com"></div><div class="form-group"><label class="form-label">Пароль</label><input type="password" class="form-input" id="auth-password" placeholder="••••••••"></div><button class="btn btn-primary" style="width: 100%;" onclick="login()">ВОЙТИ</button><p style="margin-top: var(--space-md); text-align: center; color: var(--color-text-muted); font-size: var(--text-small);"><a href="#" onclick="showAdminLogin()" style="color: var(--color-text-muted);">Вход для администратора</a></p></div>';
+}}
+
+async function login() {{
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  const errorEl = document.getElementById('auth-error');
+  try {{
+    const res = await fetch(API+'/api/auth/login', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{email,password}})}});
+    const data = await res.json();
+    if (res.ok) {{ user = data.user; purchasedIds = data.purchased_ids || []; localStorage.setItem('lms_user', JSON.stringify(user)); localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds)); render(); }}
+    else {{ errorEl.textContent = data.detail || 'Ошибка входа'; errorEl.classList.remove('hidden'); }}
+  }} catch(e) {{ errorEl.textContent = 'Ошибка соединения'; errorEl.classList.remove('hidden'); }}
+}}
+
+function logout() {{ user = null; purchasedIds = []; localStorage.removeItem('lms_user'); localStorage.removeItem('lms_purchased'); localStorage.removeItem('lms_admin'); render(); }}
+
+async function showAdminLogin() {{
+  const password = prompt('Пароль администратора:');
+  if (!password) return;
+  const res = await fetch(API+'/api/admin/verify', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{password}})}});
+  if (res.ok) {{ localStorage.setItem('lms_admin', 'true'); window.location.href = '/admin'; }}
+  else alert('Неверный пароль');
+}}
+
+function buyCourse(id) {{
+  const course = courses.find(c => c.id === id);
+  if (!course) return;
+  if (course.price_rub === 0) {{ purchasedIds.push(id); localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds)); render(); return; }}
+  const email = prompt('Введите email для получения доступа:');
+  if (!email) return;
+  fetch(API+'/api/payment/create', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{course_id:id, email}})}}).then(r=>r.json()).then(d=>{{ if(d.payment_url) {{ alert('Перенаправление на оплату'); window.open(d.payment_url, '_blank'); }} }});
+}}
+
+function openCourse(id) {{ window.location.href = '/course/'+id; }}
+
+async function editCourse(id) {{
+  const res = await fetch(API+'/api/courses/'+id);
+  const course = await res.json();
+  if (!course) return;
+  const content = document.getElementById('admin-content');
+  content.innerHTML = '<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'> Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button> <button class="btn btn-outline" onclick="showSection(\'courses\')">ОТМЕНА</button></div>';
+}}
+
+async function updateCourse(id) {{
+  const title = document.getElementById('course-title').value;
+  const description = document.getElementById('course-desc').value;
+  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
+  const payment_link = document.getElementById('course-payment-link').value;
+  const is_published = document.getElementById('course-published').checked;
+  
+  const res = await fetch(API+'/api/admin/courses/'+id, {{
+    method: 'PUT',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
+  }});
+  
+  if (res.ok) {{
+    showSection('courses');
+  }} else {{
+    const data = await res.json();
+    document.getElementById('course-error').textContent = data.detail || 'Ошибка';
+    document.getElementById('course-error').classList.remove('hidden');
+  }}
+}}
+
+async function deleteCourse(id) {{
+  if (!confirm('Удалить курс?')) return;
+  const res = await fetch(API+'/api/admin/courses/'+id, {{method: 'DELETE'}});
+  if (res.ok) showSection('courses');
+}}
+function scrollToCourses() {{ document.querySelector('.section-light').scrollIntoView({{behavior:'smooth'}}); }}
+init();
+</script>
 
 <!-- Payment Modal -->
 <div id="payment-modal" class="modal hidden">
@@ -881,8 +1015,6 @@ async def webhook(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
 
 
 
