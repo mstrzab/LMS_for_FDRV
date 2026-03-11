@@ -77,6 +77,7 @@ class CourseCreate(BaseModel):
     title: str
     description: Optional[str] = ""
     price_rub: Optional[int] = 0
+    payment_link: Optional[str] = ""
     is_published: Optional[bool] = False
 
 class PaymentCreate(BaseModel):
@@ -761,7 +762,7 @@ function render() {{
 
 function renderCard(course, index, isPurchased) {{
   const price = course.price_rub > 0 ? new Intl.NumberFormat('ru-RU').format(course.price_rub)+' <span>₽</span>' : 'БЕСПЛАТНО';
-  return '<div class="card"><div class="card-number">'+String(index+1).padStart(2,'0')+'</div><div class="card-content"><h3 class="card-title">'+course.title+'</h3><p class="card-desc">'+(course.description||'')+'</p><div class="card-footer"><div class="card-price">'+price+'</div><button class="btn '+(isPurchased?'btn-primary':'btn-outline')+' btn-sm" onclick="'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'">'+(isPurchased?'ОТКРЫТЬ':'КУПИТЬ')+'</button></div></div></div>';
+  return '<div class="card" onclick="'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'" style="cursor:pointer"><div class="card-number">'+String(index+1).padStart(2,'0')+'</div><div class="card-content"><h3 class="card-title">'+course.title+'</h3><p class="card-desc">'+(course.description||'')+'</p><div class="card-footer"><div class="card-price">'+price+'</div><button class="btn '+(isPurchased?'btn-primary':'btn-outline')+' btn-sm" onclick="event.stopPropagation();'+(isPurchased?'openCourse('+course.id+')':'buyCourse('+course.id+')')+'">'+(isPurchased?'ОТКРЫТЬ':'КУПИТЬ')+'</button></div></div></div>';
 }}
 
 function showAuth() {{
@@ -773,7 +774,7 @@ async function login() {{
   const password = document.getElementById('auth-password').value;
   const errorEl = document.getElementById('auth-error');
   try {{
-    const res = await fetch(API+'/api/auth/login', {{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({{email,password}})}});
+    const res = await fetch(API+'/api/auth/login', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{email,password}})}});
     const data = await res.json();
     if (res.ok) {{ user = data.user; purchasedIds = data.purchased_ids || []; localStorage.setItem('lms_user', JSON.stringify(user)); localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds)); render(); }}
     else {{ errorEl.textContent = data.detail || 'Ошибка входа'; errorEl.classList.remove('hidden'); }}
@@ -785,7 +786,7 @@ function logout() {{ user = null; purchasedIds = []; localStorage.removeItem('lm
 async function showAdminLogin() {{
   const password = prompt('Пароль администратора:');
   if (!password) return;
-  const res = await fetch(API+'/api/admin/verify', {{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({{password}})}});
+  const res = await fetch(API+'/api/admin/verify', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{password}})}});
   if (res.ok) {{ localStorage.setItem('lms_admin', 'true'); window.location.href = '/admin'; }}
   else alert('Неверный пароль');
 }}
@@ -796,13 +797,61 @@ function buyCourse(id) {{
   if (course.price_rub === 0) {{ purchasedIds.push(id); localStorage.setItem('lms_purchased', JSON.stringify(purchasedIds)); render(); return; }}
   const email = prompt('Введите email для получения доступа:');
   if (!email) return;
-  fetch(API+'/api/payment/create', {{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({{course_id:id, email}})}}).then(r=>r.json()).then(d=>{{ if(d.payment_url) {{ alert('Перенаправление на оплату'); window.open(d.payment_url, '_blank'); }} }});
+  fetch(API+'/api/payment/create', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{course_id:id, email}})}}).then(r=>r.json()).then(d=>{{ if(d.payment_url) {{ alert('Перенаправление на оплату'); window.open(d.payment_url, '_blank'); }} }});
 }}
 
 function openCourse(id) {{ window.location.href = '/course/'+id; }}
+
+async function editCourse(id) {{
+  const res = await fetch(API+'/api/courses/'+id);
+  const course = await res.json();
+  if (!course) return;
+  const content = document.getElementById('admin-content');
+  content.innerHTML = '<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'> Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button> <button class="btn btn-outline" onclick="showSection(\'courses\')">ОТМЕНА</button></div>';
+}}
+
+async function updateCourse(id) {{
+  const title = document.getElementById('course-title').value;
+  const description = document.getElementById('course-desc').value;
+  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
+  const payment_link = document.getElementById('course-payment-link').value;
+  const is_published = document.getElementById('course-published').checked;
+  
+  const res = await fetch(API+'/api/admin/courses/'+id, {{
+    method: 'PUT',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
+  }});
+  
+  if (res.ok) {{
+    showSection('courses');
+  }} else {{
+    const data = await res.json();
+    document.getElementById('course-error').textContent = data.detail || 'Ошибка';
+    document.getElementById('course-error').classList.remove('hidden');
+  }}
+}}
+
+async function deleteCourse(id) {{
+  if (!confirm('Удалить курс?')) return;
+  const res = await fetch(API+'/api/admin/courses/'+id, {{method: 'DELETE'}});
+  if (res.ok) showSection('courses');
+}}
 function scrollToCourses() {{ document.querySelector('.section-light').scrollIntoView({{behavior:'smooth'}}); }}
 init();
 </script>
+
+<!-- Payment Modal -->
+<div id="payment-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closePaymentModal()"></div>
+  <div class="modal-content">
+    <button class="modal-close" onclick="closePaymentModal()">X</button>
+    <h2 id="payment-modal-title" class="modal-title">Course</h2>
+    <div class="modal-price" id="payment-modal-price">0 RUB</div>
+    <p class="modal-desc">You will be redirected to payment page</p>
+    <button id="payment-btn" class="btn btn-primary" style="width:100%">PAY NOW</button>
+  </div>
+</div>
 </body>
 </html>'''
 
@@ -824,6 +873,18 @@ function showLesson(i){{currentLesson=i;document.querySelectorAll('.lesson-item'
 function checkAnswer(inp){{const hw=course.lessons[currentLesson].homework;document.querySelectorAll('.hw-option').forEach(el=>el.classList.remove('selected'));inp.closest('.hw-option').classList.add('selected');document.getElementById('hw-result').innerHTML=inp.value===hw.correct_answer?'<div class="hw-result correct">✅ ПРАВИЛЬНО</div>':'<div class="hw-result incorrect">❌ НЕПРАВИЛЬНО</div>';}}
 init();
 </script>
+
+<!-- Payment Modal -->
+<div id="payment-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closePaymentModal()"></div>
+  <div class="modal-content">
+    <button class="modal-close" onclick="closePaymentModal()">X</button>
+    <h2 id="payment-modal-title" class="modal-title">Course</h2>
+    <div class="modal-price" id="payment-modal-price">0 RUB</div>
+    <p class="modal-desc">You will be redirected to payment page</p>
+    <button id="payment-btn" class="btn btn-primary" style="width:100%">PAY NOW</button>
+  </div>
+</div>
 </body>
 </html>'''
 
@@ -839,10 +900,22 @@ def get_admin_html():
 const API=window.location.origin;
 function init(){{if(!localStorage.getItem('lms_admin')){{window.location.href='/';return;}}showSection('courses');}}
 function logout(){{localStorage.clear();window.location.href='/';}}
-async function showSection(section){{document.querySelectorAll('.admin-nav-item').forEach((el,i)=>el.classList.toggle('active',i===(section==='courses'?0:1)));const content=document.getElementById('admin-content');if(section==='courses'){{const res=await fetch(API+'/api/courses');const data=await res.json();const courses=data.courses||[];content.innerHTML='<div class="section-header"><h2>ВСЕ КУРСЫ</h2><button class="btn btn-primary btn-sm" onclick="showSection(\\'new-course\\')">+ ДОБАВИТЬ</button></div><table class="table"><thead><tr><th>ID</th><th>Название</th><th>Цена</th><th>Статус</th></tr></thead><tbody>'+courses.map(c=>'<tr><td>'+c.id+'</td><td>'+c.title+'</td><td>'+c.price_rub+' ₽</td><td><span class="badge '+(c.is_published?'badge-success':'badge-warning')+'">'+(c.is_published?'Опубликован':'Черновик')+'</span></td></tr>').join('')+'</tbody></table>';}}else if(section==='new-course'){{content.innerHTML='<h2>НОВЫЙ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" placeholder="Название курса"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3" placeholder="Описание курса"></textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="0"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published"> Опубликован</label></div><button class="btn btn-primary" onclick="createCourse()">СОЗДАТЬ</button></div>';}}}}
-async function createCourse(){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const is_published=document.getElementById('course-published').checked;if(!title){{document.getElementById('course-error').textContent='Введите название';document.getElementById('course-error').classList.remove('hidden');return;}}const res=await fetch(API+'/api/admin/courses',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,is_published}})}});if(res.ok)showSection('courses');else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}
+async function showSection(section){{document.querySelectorAll('.admin-nav-item').forEach((el,i)=>el.classList.toggle('active',i===(section==='courses'?0:1)));const content=document.getElementById('admin-content');if(section==='courses'){{const res=await fetch(API+'/api/courses');const data=await res.json();const courses=data.courses||[];content.innerHTML='<div class="section-header"><h2>ВСЕ КУРСЫ</h2><button class="btn btn-primary btn-sm" onclick="showSection(\\'new-course\\')">+ ДОБАВИТЬ</button></div><table class="table"><thead><tr><th>ID</th><th>Название</th><th>Цена</th><th>Статус</th><th>Действия</th></tr></thead><tbody>'+courses.map(c=>'<tr><td>'+c.id+'</td><td>'+c.title+'</td><td>'+c.price_rub+' RUB</td><td><span class="badge '+(c.is_published?'badge-success':'badge-warning')+'">'+(c.is_published?'Published':'Draft')+'</span></td><td><button class="btn btn-sm" onclick="editCourse('+c.id+')">EDIT</button></td></tr>').join('')+'</tbody></table>';}}else if(section==='new-course'){{content.innerHTML='<h2>НОВЫЙ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" placeholder="Название курса"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3" placeholder="Описание курса"></textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-payment-link" placeholder="https://payform.ru/..."></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published"> Опубликован</label></div><button class="btn btn-primary" onclick="createCourse()">СОЗДАТЬ</button></div>';}}}}
+async function createCourse(){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const payment_link=document.getElementById('course-payment-link').value;const is_published=document.getElementById('course-published').checked;if(!title){{document.getElementById('course-error').textContent='Введите название';document.getElementById('course-error').classList.remove('hidden');return;}}const res=await fetch(API+'/api/admin/courses',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,payment_link,is_published}})}});if(res.ok)showSection('courses');else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}
 init();
 </script>
+
+<!-- Payment Modal -->
+<div id="payment-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closePaymentModal()"></div>
+  <div class="modal-content">
+    <button class="modal-close" onclick="closePaymentModal()">X</button>
+    <h2 id="payment-modal-title" class="modal-title">Course</h2>
+    <div class="modal-price" id="payment-modal-price">0 RUB</div>
+    <p class="modal-desc">You will be redirected to payment page</p>
+    <button id="payment-btn" class="btn btn-primary" style="width:100%">PAY NOW</button>
+  </div>
+</div>
 </body>
 </html>'''
 
@@ -856,8 +929,6 @@ async def root():
 @app.get("/api/courses")
 async def api_courses():
     courses = get_all_courses(published_only=True)
-    for c in courses:
-        c.pop("payment_link", None)
     return {"courses": courses}
 
 
@@ -895,7 +966,7 @@ async def api_admin_verify(data: AdminVerifyRequest):
 
 @app.post("/api/admin/courses")
 async def api_create_course(data: CourseCreate):
-    return create_course(title=data.title, description=data.description, price_rub=data.price_rub, is_published=data.is_published)
+    return create_course(title=data.title, description=data.description, price_rub=data.price_rub, payment_link=data.payment_link, is_published=data.is_published)
 
 
 @app.post("/api/payment/create")
@@ -932,3 +1003,8 @@ async def webhook(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
+
+
