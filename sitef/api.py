@@ -22,7 +22,7 @@ from database import (
     create_course, create_lesson, create_homework, create_user,
     authenticate_user, get_purchased_course_ids, user_has_course_access,
     purchase_course, update_course, delete_course,
-    get_lessons_by_course, get_homework_by_lesson
+    get_lessons_by_course, get_homework_by_lesson, delete_lesson
 )
 from prodamus_integration import generate_payment_link, generate_order_id
 
@@ -933,6 +933,85 @@ init();
 
 
 # Routes
+
+class LessonCreate(BaseModel):
+    course_id: int
+    title: str
+    description: Optional[str] = ""
+    video_url: Optional[str] = ""
+    content_text: Optional[str] = ""
+    sort_order: Optional[int] = 0
+
+class HomeworkCreateModel(BaseModel):
+    lesson_id: int
+    content_text: str
+    options: Optional[list] = []
+    correct_answer: str
+
+
+
+
+# Lesson Management API
+@app.post("/api/admin/lessons")
+async def admin_create_lesson(lesson: LessonCreate):
+    lid = create_lesson(
+        course_id=lesson.course_id,
+        title=lesson.title,
+        description=lesson.description,
+        video_url=lesson.video_url,
+        content_text=lesson.content_text,
+        sort_order=lesson.sort_order
+    )
+    return {"id": lid, "success": True}
+
+@app.get("/api/admin/lessons/{course_id}")
+async def admin_get_lessons(course_id: int):
+    lessons = get_lessons_by_course(course_id)
+    for l in lessons:
+        l['homework'] = get_homework_by_lesson(l['id'])
+    return {"lessons": lessons}
+
+@app.delete("/api/admin/lessons/{lesson_id}")
+async def admin_delete_lesson(lesson_id: int):
+    delete_lesson(lesson_id)
+    return {"success": True}
+
+@app.post("/api/admin/homework")
+async def admin_create_homework(hw: HomeworkCreateModel):
+    hid = create_homework(
+        lesson_id=hw.lesson_id,
+        content_text=hw.content_text,
+        options=hw.options,
+        correct_answer=hw.correct_answer
+    )
+    return {"id": hid, "success": True}
+
+
+
+# Lesson API Endpoints
+@app.post("/api/admin/lessons")
+async def admin_create_lesson(request: Request):
+    data = await request.json()
+    lid = create_lesson(
+        course_id=data.get("course_id"),
+        title=data.get("title"),
+        description=data.get("description", ""),
+        video_url=data.get("video_url"),
+        content_text=data.get("content_text"),
+        sort_order=data.get("sort_order", 0)
+    )
+    return {"id": lid, "success": True}
+
+@app.get("/api/admin/lessons/{course_id}")
+async def admin_get_lessons(course_id: int):
+    lessons = get_lessons_by_course(course_id)
+    return {"lessons": lessons}
+
+@app.delete("/api/admin/lessons/{lesson_id}")
+async def admin_delete_lesson(lesson_id: int):
+    delete_lesson(lesson_id)
+    return {"success": True}
+
 @app.get("/")
 async def root():
     return HTMLResponse(content=get_main_html())
@@ -1015,6 +1094,9 @@ async def webhook(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
 
 
 
