@@ -815,13 +815,346 @@ function buyCourse(id) {{
 
 function openCourse(id) {{ window.location.href = '/course/'+id; }}
 
+
+// Current course being edited
+let currentCourseId = null;
+let courseLessons = [];
+
 async function editCourse(id) {{
+  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
+  
   const content = document.getElementById('admin-content');
-  content.innerHTML = '<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'> Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button> <button class="btn btn-outline" onclick="showSection(\"courses\")">ОТМЕНА</button></div>';
+  content.innerHTML = `
+    <div class="course-edit-header">
+      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
+      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    </div>
+    
+    <div id="tab-info" class="tab-content">
+      <div style="max-width:600px;margin-top:var(--space-md);">
+        <div id="course-error" class="auth-error hidden"></div>
+        <div class="form-group">
+          <label class="form-label">Название курса</label>
+          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-input" id="course-desc" rows="4">${{(course.description||'')}}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Цена (руб.)</label>
+            <input type="number" class="form-input" id="course-price" value="${{course.price_rub}}">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Ссылка на оплату</label>
+            <input type="text" class="form-input" id="course-payment-link" value="${{(course.payment_link||'')}}" placeholder="https://payform.ru/...">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}>
+            Опубликован на сайте
+          </label>
+        </div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+      </div>
+    </div>
+    
+    <div id="tab-lessons" class="tab-content hidden">
+      <div class="section-header" style="margin-top:var(--space-md);">
+        <h3>Программа курса</h3>
+        <button class="btn btn-primary btn-sm" onclick="showAddLessonModal()">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list" class="lessons-list">
+        <div class="loading">Загрузка уроков...</div>
+      </div>
+    </div>
+  `;
+  
+  // Add CSS for tabs
+  addTabStyles();
+  
+  // Load lessons
+  loadLessons(id);
 }}
+
+function addTabStyles() {{
+  if (document.getElementById('tab-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'tab-styles';
+  style.textContent = `
+    .tabs {{ display: flex; gap: 0; border-bottom: 2px solid var(--color-border-dark); margin-top: var(--space-md); }}
+    .tab-btn {{ 
+      padding: 0.75rem 1.5rem; 
+      background: none; 
+      border: none; 
+      border-bottom: 2px solid transparent; 
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      transition: all 0.2s;
+    }}
+    .tab-btn:hover {{ color: var(--color-white); }}
+    .tab-btn.active {{ color: var(--color-red); border-bottom-color: var(--color-red); }}
+    .tab-content {{ padding: var(--space-md) 0; }}
+    .tab-content.hidden {{ display: none; }}
+    .course-edit-header {{ display: flex; justify-content: space-between; align-items: center; }}
+    .form-row {{ display: flex; gap: var(--space-md); }}
+    .lessons-list {{ margin-top: var(--space-md); }}
+    .lesson-item {{ 
+      display: flex; 
+      align-items: center; 
+      padding: 1rem; 
+      background: var(--color-dark-grey); 
+      border: var(--border-thin);
+      margin-bottom: 0.5rem;
+      gap: 1rem;
+    }}
+    .lesson-num {{ 
+      width: 2rem; 
+      height: 2rem; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      background: var(--color-red); 
+      color: white; 
+      font-weight: bold;
+      font-size: 0.9rem;
+    }}
+    .lesson-info {{ flex: 1; }}
+    .lesson-title {{ font-weight: 600; margin-bottom: 0.25rem; }}
+    .lesson-meta {{ font-size: 0.85rem; color: var(--color-text-muted); }}
+    .lesson-actions {{ display: flex; gap: 0.5rem; }}
+    .loading {{ text-align: center; padding: 2rem; color: var(--color-text-muted); }}
+    .empty-state {{ text-align: center; padding: 3rem; color: var(--color-text-muted); }}
+    .empty-state h4 {{ margin-bottom: 0.5rem; }}
+  `;
+  document.head.appendChild(style);
+}}
+
+function showTab(tabName, btn) {{
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+tabName).classList.remove('hidden');
+  btn.classList.add('active');
+}}
+
+async function loadLessons(courseId) {{
+  const list = document.getElementById('lessons-list');
+  const countEl = document.getElementById('lessons-count');
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+courseId);
+    const data = await res.json();
+    courseLessons = data.lessons || [];
+    
+    countEl.textContent = courseLessons.length;
+    
+    if (courseLessons.length === 0) {{
+      list.innerHTML = `
+        <div class="empty-state">
+          <h4>Уроков пока нет</h4>
+          <p>Добавьте первый урок в программу курса</p>
+        </div>
+      `;
+      return;
+    }}
+    
+    list.innerHTML = courseLessons.map((lesson, idx) => `
+      <div class="lesson-item" data-id="${{lesson.id}}">
+        <div class="lesson-num">${{idx + 1}}</div>
+        <div class="lesson-info">
+          <div class="lesson-title">${{lesson.title}}</div>
+          <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
+        </div>
+        <div class="lesson-actions">
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+        </div>
+      </div>
+    `).join('');
+  }} catch(e) {{
+    list.innerHTML = '<div class="auth-error">Ошибка загрузки уроков</div>';
+  }}
+}}
+
+function showAddLessonModal() {{
+  showLessonModal(null);
+}}
+
+async function editLesson(lessonId) {{
+  const lesson = courseLessons.find(l => l.id === lessonId);
+  if (!lesson) return;
+  showLessonModal(lesson);
+}}
+
+function showLessonModal(lesson) {{
+  const isEdit = lesson !== null;
+  const modal = document.createElement('div');
+  modal.id = 'lesson-modal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeLessonModal()"></div>
+    <div class="modal-content" style="max-width:600px;">
+      <button class="modal-close" onclick="closeLessonModal()">X</button>
+      <h2 class="modal-title">${{isEdit ? 'РЕДАКТИРОВАТЬ УРОК' : 'НОВЫЙ УРОК'}}</h2>
+      <div id="lesson-error" class="auth-error hidden"></div>
+      
+      <div class="form-group">
+        <label class="form-label">Название урока *</label>
+        <input type="text" class="form-input" id="lesson-title" value="${{isEdit ? lesson.title : ''}}" placeholder="Название урока">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Описание / Контент</label>
+        <textarea class="form-input" id="lesson-description" rows="4" placeholder="Описание или текст урока">${{isEdit ? (lesson.description||'') : ''}}</textarea>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Видео URL</label>
+          <input type="text" class="form-input" id="lesson-video" value="${{isEdit ? (lesson.video_url||'') : ''}}" placeholder="https://youtube.com/...">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Порядковый номер</label>
+          <input type="number" class="form-input" id="lesson-order" value="${{isEdit ? (lesson.sort_order||0) : courseLessons.length}}" style="width:100px;">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Текст урока (Markdown)</label>
+        <textarea class="form-input" id="lesson-content" rows="6" placeholder="Текст урока в формате Markdown">${{isEdit ? (lesson.content_text||'') : ''}}</textarea>
+      </div>
+      
+      <div style="display:flex;gap:1rem;margin-top:var(--space-md);">
+        <button class="btn btn-primary" onclick="saveLesson(${{isEdit ? lesson.id : 'null'}})">${{isEdit ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ УРОК'}}</button>
+        <button class="btn btn-outline" onclick="closeLessonModal()">ОТМЕНА</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.classList.remove('hidden');
+}}
+
+function closeLessonModal() {{
+  const modal = document.getElementById('lesson-modal');
+  if (modal) modal.remove();
+}}
+
+async function saveLesson(lessonId) {{
+  const errorEl = document.getElementById('lesson-error');
+  const title = document.getElementById('lesson-title').value.trim();
+  const description = document.getElementById('lesson-description').value.trim();
+  const video_url = document.getElementById('lesson-video').value.trim();
+  const sort_order = parseInt(document.getElementById('lesson-order').value) || 0;
+  const content_text = document.getElementById('lesson-content').value.trim();
+  
+  if (!title) {{
+    errorEl.textContent = 'Название урока обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    let res;
+    if (lessonId) {{
+      // Update existing lesson
+      res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+        method: 'PUT',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{title, description, video_url, sort_order, content_text}})
+      }});
+    }} else {{
+      // Create new lesson
+      res = await fetch(API+'/api/admin/lessons', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{course_id: currentCourseId, title, description, video_url, sort_order, content_text}})
+      }});
+    }}
+    
+    const data = await res.json();
+    
+    if (res.ok) {{
+      closeLessonModal();
+      loadLessons(currentCourseId);
+    }} else {{
+      errorEl.textContent = data.detail || 'Ошибка сохранения';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+async function deleteLesson(lessonId) {{
+  if (!confirm('Удалить этот урок?')) return;
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+      method: 'DELETE'
+    }});
+    
+    if (res.ok) {{
+      loadLessons(currentCourseId);
+    }} else {{
+      alert('Ошибка удаления урока');
+    }}
+  }} catch(e) {{
+    alert('Ошибка соединения');
+  }}
+}}
+
+async function updateCourse(id) {{
+  const title = document.getElementById('course-title').value.trim();
+  const description = document.getElementById('course-desc').value.trim();
+  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
+  const payment_link = document.getElementById('course-payment-link').value.trim();
+  const is_published = document.getElementById('course-published').checked;
+  const errorEl = document.getElementById('course-error');
+  
+  if (!title) {{
+    errorEl.textContent = 'Название обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    const res = await fetch(API+'/api/admin/courses/'+id, {{
+      method: 'PUT',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
+    }});
+    
+    if (res.ok) {{
+      errorEl.textContent = 'Сохранено!';
+      errorEl.style.background = '#2a7a2a';
+      errorEl.classList.remove('hidden');
+      setTimeout(() => errorEl.classList.add('hidden'), 2000);
+    }} else {{
+      const data = await res.json();
+      errorEl.textContent = data.detail || 'Ошибка';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+
 
 async function updateCourse(id) {{
   const title = document.getElementById('course-title').value;
@@ -852,13 +1185,346 @@ async function deleteCourse(id) {{
 }}
 function scrollToCourses() {{ document.querySelector('.section-light').scrollIntoView({{behavior:'smooth'}}); }}
 
+
+// Current course being edited
+let currentCourseId = null;
+let courseLessons = [];
+
 async function editCourse(id) {{
+  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
+  
   const content = document.getElementById('admin-content');
-  content.innerHTML = '<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'> Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button> <button class="btn btn-outline" onclick="showSection(\\"courses\\")">ОТМЕНА</button></div>';
+  content.innerHTML = `
+    <div class="course-edit-header">
+      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
+      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    </div>
+    
+    <div id="tab-info" class="tab-content">
+      <div style="max-width:600px;margin-top:var(--space-md);">
+        <div id="course-error" class="auth-error hidden"></div>
+        <div class="form-group">
+          <label class="form-label">Название курса</label>
+          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-input" id="course-desc" rows="4">${{(course.description||'')}}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Цена (руб.)</label>
+            <input type="number" class="form-input" id="course-price" value="${{course.price_rub}}">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Ссылка на оплату</label>
+            <input type="text" class="form-input" id="course-payment-link" value="${{(course.payment_link||'')}}" placeholder="https://payform.ru/...">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}>
+            Опубликован на сайте
+          </label>
+        </div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+      </div>
+    </div>
+    
+    <div id="tab-lessons" class="tab-content hidden">
+      <div class="section-header" style="margin-top:var(--space-md);">
+        <h3>Программа курса</h3>
+        <button class="btn btn-primary btn-sm" onclick="showAddLessonModal()">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list" class="lessons-list">
+        <div class="loading">Загрузка уроков...</div>
+      </div>
+    </div>
+  `;
+  
+  // Add CSS for tabs
+  addTabStyles();
+  
+  // Load lessons
+  loadLessons(id);
 }}
+
+function addTabStyles() {{
+  if (document.getElementById('tab-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'tab-styles';
+  style.textContent = `
+    .tabs {{ display: flex; gap: 0; border-bottom: 2px solid var(--color-border-dark); margin-top: var(--space-md); }}
+    .tab-btn {{ 
+      padding: 0.75rem 1.5rem; 
+      background: none; 
+      border: none; 
+      border-bottom: 2px solid transparent; 
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      transition: all 0.2s;
+    }}
+    .tab-btn:hover {{ color: var(--color-white); }}
+    .tab-btn.active {{ color: var(--color-red); border-bottom-color: var(--color-red); }}
+    .tab-content {{ padding: var(--space-md) 0; }}
+    .tab-content.hidden {{ display: none; }}
+    .course-edit-header {{ display: flex; justify-content: space-between; align-items: center; }}
+    .form-row {{ display: flex; gap: var(--space-md); }}
+    .lessons-list {{ margin-top: var(--space-md); }}
+    .lesson-item {{ 
+      display: flex; 
+      align-items: center; 
+      padding: 1rem; 
+      background: var(--color-dark-grey); 
+      border: var(--border-thin);
+      margin-bottom: 0.5rem;
+      gap: 1rem;
+    }}
+    .lesson-num {{ 
+      width: 2rem; 
+      height: 2rem; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      background: var(--color-red); 
+      color: white; 
+      font-weight: bold;
+      font-size: 0.9rem;
+    }}
+    .lesson-info {{ flex: 1; }}
+    .lesson-title {{ font-weight: 600; margin-bottom: 0.25rem; }}
+    .lesson-meta {{ font-size: 0.85rem; color: var(--color-text-muted); }}
+    .lesson-actions {{ display: flex; gap: 0.5rem; }}
+    .loading {{ text-align: center; padding: 2rem; color: var(--color-text-muted); }}
+    .empty-state {{ text-align: center; padding: 3rem; color: var(--color-text-muted); }}
+    .empty-state h4 {{ margin-bottom: 0.5rem; }}
+  `;
+  document.head.appendChild(style);
+}}
+
+function showTab(tabName, btn) {{
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+tabName).classList.remove('hidden');
+  btn.classList.add('active');
+}}
+
+async function loadLessons(courseId) {{
+  const list = document.getElementById('lessons-list');
+  const countEl = document.getElementById('lessons-count');
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+courseId);
+    const data = await res.json();
+    courseLessons = data.lessons || [];
+    
+    countEl.textContent = courseLessons.length;
+    
+    if (courseLessons.length === 0) {{
+      list.innerHTML = `
+        <div class="empty-state">
+          <h4>Уроков пока нет</h4>
+          <p>Добавьте первый урок в программу курса</p>
+        </div>
+      `;
+      return;
+    }}
+    
+    list.innerHTML = courseLessons.map((lesson, idx) => `
+      <div class="lesson-item" data-id="${{lesson.id}}">
+        <div class="lesson-num">${{idx + 1}}</div>
+        <div class="lesson-info">
+          <div class="lesson-title">${{lesson.title}}</div>
+          <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
+        </div>
+        <div class="lesson-actions">
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+        </div>
+      </div>
+    `).join('');
+  }} catch(e) {{
+    list.innerHTML = '<div class="auth-error">Ошибка загрузки уроков</div>';
+  }}
+}}
+
+function showAddLessonModal() {{
+  showLessonModal(null);
+}}
+
+async function editLesson(lessonId) {{
+  const lesson = courseLessons.find(l => l.id === lessonId);
+  if (!lesson) return;
+  showLessonModal(lesson);
+}}
+
+function showLessonModal(lesson) {{
+  const isEdit = lesson !== null;
+  const modal = document.createElement('div');
+  modal.id = 'lesson-modal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeLessonModal()"></div>
+    <div class="modal-content" style="max-width:600px;">
+      <button class="modal-close" onclick="closeLessonModal()">X</button>
+      <h2 class="modal-title">${{isEdit ? 'РЕДАКТИРОВАТЬ УРОК' : 'НОВЫЙ УРОК'}}</h2>
+      <div id="lesson-error" class="auth-error hidden"></div>
+      
+      <div class="form-group">
+        <label class="form-label">Название урока *</label>
+        <input type="text" class="form-input" id="lesson-title" value="${{isEdit ? lesson.title : ''}}" placeholder="Название урока">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Описание / Контент</label>
+        <textarea class="form-input" id="lesson-description" rows="4" placeholder="Описание или текст урока">${{isEdit ? (lesson.description||'') : ''}}</textarea>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Видео URL</label>
+          <input type="text" class="form-input" id="lesson-video" value="${{isEdit ? (lesson.video_url||'') : ''}}" placeholder="https://youtube.com/...">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Порядковый номер</label>
+          <input type="number" class="form-input" id="lesson-order" value="${{isEdit ? (lesson.sort_order||0) : courseLessons.length}}" style="width:100px;">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Текст урока (Markdown)</label>
+        <textarea class="form-input" id="lesson-content" rows="6" placeholder="Текст урока в формате Markdown">${{isEdit ? (lesson.content_text||'') : ''}}</textarea>
+      </div>
+      
+      <div style="display:flex;gap:1rem;margin-top:var(--space-md);">
+        <button class="btn btn-primary" onclick="saveLesson(${{isEdit ? lesson.id : 'null'}})">${{isEdit ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ УРОК'}}</button>
+        <button class="btn btn-outline" onclick="closeLessonModal()">ОТМЕНА</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.classList.remove('hidden');
+}}
+
+function closeLessonModal() {{
+  const modal = document.getElementById('lesson-modal');
+  if (modal) modal.remove();
+}}
+
+async function saveLesson(lessonId) {{
+  const errorEl = document.getElementById('lesson-error');
+  const title = document.getElementById('lesson-title').value.trim();
+  const description = document.getElementById('lesson-description').value.trim();
+  const video_url = document.getElementById('lesson-video').value.trim();
+  const sort_order = parseInt(document.getElementById('lesson-order').value) || 0;
+  const content_text = document.getElementById('lesson-content').value.trim();
+  
+  if (!title) {{
+    errorEl.textContent = 'Название урока обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    let res;
+    if (lessonId) {{
+      // Update existing lesson
+      res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+        method: 'PUT',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{title, description, video_url, sort_order, content_text}})
+      }});
+    }} else {{
+      // Create new lesson
+      res = await fetch(API+'/api/admin/lessons', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{course_id: currentCourseId, title, description, video_url, sort_order, content_text}})
+      }});
+    }}
+    
+    const data = await res.json();
+    
+    if (res.ok) {{
+      closeLessonModal();
+      loadLessons(currentCourseId);
+    }} else {{
+      errorEl.textContent = data.detail || 'Ошибка сохранения';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+async function deleteLesson(lessonId) {{
+  if (!confirm('Удалить этот урок?')) return;
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+      method: 'DELETE'
+    }});
+    
+    if (res.ok) {{
+      loadLessons(currentCourseId);
+    }} else {{
+      alert('Ошибка удаления урока');
+    }}
+  }} catch(e) {{
+    alert('Ошибка соединения');
+  }}
+}}
+
+async function updateCourse(id) {{
+  const title = document.getElementById('course-title').value.trim();
+  const description = document.getElementById('course-desc').value.trim();
+  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
+  const payment_link = document.getElementById('course-payment-link').value.trim();
+  const is_published = document.getElementById('course-published').checked;
+  const errorEl = document.getElementById('course-error');
+  
+  if (!title) {{
+    errorEl.textContent = 'Название обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    const res = await fetch(API+'/api/admin/courses/'+id, {{
+      method: 'PUT',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
+    }});
+    
+    if (res.ok) {{
+      errorEl.textContent = 'Сохранено!';
+      errorEl.style.background = '#2a7a2a';
+      errorEl.classList.remove('hidden');
+      setTimeout(() => errorEl.classList.add('hidden'), 2000);
+    }} else {{
+      const data = await res.json();
+      errorEl.textContent = data.detail || 'Ошибка';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+
 
 async function updateCourse(id) {{
   const title = document.getElementById('course-title').value;
@@ -916,13 +1582,346 @@ function renderSidebar(){{document.getElementById('sidebar').innerHTML='<h3>УР
 function showLesson(i){{currentLesson=i;document.querySelectorAll('.lesson-item').forEach((el,idx)=>el.classList.toggle('active',idx===i));const l=course.lessons[i];const hw=l.homework;let html='<h1>'+l.title+'</h1><p style="color:var(--color-text-muted);margin-bottom:var(--space-md);">'+(l.description||'')+'</p>';if(l.content_text)html+='<div class="content-box">'+l.content_text.replace(/```\\w*\\n([\\s\\S]*?)```/g,'<pre><code>$1</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\\n/g,'<br>')+'</div>';if(hw){{const opts=hw.options||[];html+='<div class="hw-section"><h3 class="hw-title"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/></svg>ДОМАШНЕЕ ЗАДАНИЕ</h3><p style="margin-bottom:var(--space-md);">'+(hw.content_text||'')+'</p>'+(opts.length?'<div class="hw-options">'+opts.map(o=>'<label class="hw-option"><input type="radio" name="hw-answer" value="'+o+'" onchange="checkAnswer(this)">'+o+'</label>').join('')+'</div><div id="hw-result"></div>':'')+'</div>';}}document.getElementById('content').innerHTML=html;let nav='<div style="display:flex;gap:1rem;margin-top:var(--space-lg);">';if(currentLesson>0)nav+='<button class="btn btn-outline" onclick="showLesson('+(currentLesson-1)+')">← ПРЕДЫДУЩИЙ</button>';if(currentLesson<course.lessons.length-1)nav+='<button class="btn btn-primary" onclick="showLesson('+(currentLesson+1)+')">СЛЕДУЮЩИЙ →</button>';nav+='</div>';document.getElementById('content').innerHTML+=nav;}}
 function checkAnswer(inp){{const hw=course.lessons[currentLesson].homework;document.querySelectorAll('.hw-option').forEach(el=>el.classList.remove('selected'));inp.closest('.hw-option').classList.add('selected');document.getElementById('hw-result').innerHTML=inp.value===hw.correct_answer?'<div class="hw-result correct">✅ ПРАВИЛЬНО</div>':'<div class="hw-result incorrect">❌ НЕПРАВИЛЬНО</div>';}}
 
+
+// Current course being edited
+let currentCourseId = null;
+let courseLessons = [];
+
 async function editCourse(id) {{
+  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
+  
   const content = document.getElementById('admin-content');
-  content.innerHTML = '<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'> Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button> <button class="btn btn-outline" onclick="showSection(\\"courses\\")">ОТМЕНА</button></div>';
+  content.innerHTML = `
+    <div class="course-edit-header">
+      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
+      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    </div>
+    
+    <div id="tab-info" class="tab-content">
+      <div style="max-width:600px;margin-top:var(--space-md);">
+        <div id="course-error" class="auth-error hidden"></div>
+        <div class="form-group">
+          <label class="form-label">Название курса</label>
+          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-input" id="course-desc" rows="4">${{(course.description||'')}}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Цена (руб.)</label>
+            <input type="number" class="form-input" id="course-price" value="${{course.price_rub}}">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Ссылка на оплату</label>
+            <input type="text" class="form-input" id="course-payment-link" value="${{(course.payment_link||'')}}" placeholder="https://payform.ru/...">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}>
+            Опубликован на сайте
+          </label>
+        </div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+      </div>
+    </div>
+    
+    <div id="tab-lessons" class="tab-content hidden">
+      <div class="section-header" style="margin-top:var(--space-md);">
+        <h3>Программа курса</h3>
+        <button class="btn btn-primary btn-sm" onclick="showAddLessonModal()">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list" class="lessons-list">
+        <div class="loading">Загрузка уроков...</div>
+      </div>
+    </div>
+  `;
+  
+  // Add CSS for tabs
+  addTabStyles();
+  
+  // Load lessons
+  loadLessons(id);
 }}
+
+function addTabStyles() {{
+  if (document.getElementById('tab-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'tab-styles';
+  style.textContent = `
+    .tabs {{ display: flex; gap: 0; border-bottom: 2px solid var(--color-border-dark); margin-top: var(--space-md); }}
+    .tab-btn {{ 
+      padding: 0.75rem 1.5rem; 
+      background: none; 
+      border: none; 
+      border-bottom: 2px solid transparent; 
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      transition: all 0.2s;
+    }}
+    .tab-btn:hover {{ color: var(--color-white); }}
+    .tab-btn.active {{ color: var(--color-red); border-bottom-color: var(--color-red); }}
+    .tab-content {{ padding: var(--space-md) 0; }}
+    .tab-content.hidden {{ display: none; }}
+    .course-edit-header {{ display: flex; justify-content: space-between; align-items: center; }}
+    .form-row {{ display: flex; gap: var(--space-md); }}
+    .lessons-list {{ margin-top: var(--space-md); }}
+    .lesson-item {{ 
+      display: flex; 
+      align-items: center; 
+      padding: 1rem; 
+      background: var(--color-dark-grey); 
+      border: var(--border-thin);
+      margin-bottom: 0.5rem;
+      gap: 1rem;
+    }}
+    .lesson-num {{ 
+      width: 2rem; 
+      height: 2rem; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      background: var(--color-red); 
+      color: white; 
+      font-weight: bold;
+      font-size: 0.9rem;
+    }}
+    .lesson-info {{ flex: 1; }}
+    .lesson-title {{ font-weight: 600; margin-bottom: 0.25rem; }}
+    .lesson-meta {{ font-size: 0.85rem; color: var(--color-text-muted); }}
+    .lesson-actions {{ display: flex; gap: 0.5rem; }}
+    .loading {{ text-align: center; padding: 2rem; color: var(--color-text-muted); }}
+    .empty-state {{ text-align: center; padding: 3rem; color: var(--color-text-muted); }}
+    .empty-state h4 {{ margin-bottom: 0.5rem; }}
+  `;
+  document.head.appendChild(style);
+}}
+
+function showTab(tabName, btn) {{
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+tabName).classList.remove('hidden');
+  btn.classList.add('active');
+}}
+
+async function loadLessons(courseId) {{
+  const list = document.getElementById('lessons-list');
+  const countEl = document.getElementById('lessons-count');
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+courseId);
+    const data = await res.json();
+    courseLessons = data.lessons || [];
+    
+    countEl.textContent = courseLessons.length;
+    
+    if (courseLessons.length === 0) {{
+      list.innerHTML = `
+        <div class="empty-state">
+          <h4>Уроков пока нет</h4>
+          <p>Добавьте первый урок в программу курса</p>
+        </div>
+      `;
+      return;
+    }}
+    
+    list.innerHTML = courseLessons.map((lesson, idx) => `
+      <div class="lesson-item" data-id="${{lesson.id}}">
+        <div class="lesson-num">${{idx + 1}}</div>
+        <div class="lesson-info">
+          <div class="lesson-title">${{lesson.title}}</div>
+          <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
+        </div>
+        <div class="lesson-actions">
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+        </div>
+      </div>
+    `).join('');
+  }} catch(e) {{
+    list.innerHTML = '<div class="auth-error">Ошибка загрузки уроков</div>';
+  }}
+}}
+
+function showAddLessonModal() {{
+  showLessonModal(null);
+}}
+
+async function editLesson(lessonId) {{
+  const lesson = courseLessons.find(l => l.id === lessonId);
+  if (!lesson) return;
+  showLessonModal(lesson);
+}}
+
+function showLessonModal(lesson) {{
+  const isEdit = lesson !== null;
+  const modal = document.createElement('div');
+  modal.id = 'lesson-modal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeLessonModal()"></div>
+    <div class="modal-content" style="max-width:600px;">
+      <button class="modal-close" onclick="closeLessonModal()">X</button>
+      <h2 class="modal-title">${{isEdit ? 'РЕДАКТИРОВАТЬ УРОК' : 'НОВЫЙ УРОК'}}</h2>
+      <div id="lesson-error" class="auth-error hidden"></div>
+      
+      <div class="form-group">
+        <label class="form-label">Название урока *</label>
+        <input type="text" class="form-input" id="lesson-title" value="${{isEdit ? lesson.title : ''}}" placeholder="Название урока">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Описание / Контент</label>
+        <textarea class="form-input" id="lesson-description" rows="4" placeholder="Описание или текст урока">${{isEdit ? (lesson.description||'') : ''}}</textarea>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Видео URL</label>
+          <input type="text" class="form-input" id="lesson-video" value="${{isEdit ? (lesson.video_url||'') : ''}}" placeholder="https://youtube.com/...">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Порядковый номер</label>
+          <input type="number" class="form-input" id="lesson-order" value="${{isEdit ? (lesson.sort_order||0) : courseLessons.length}}" style="width:100px;">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Текст урока (Markdown)</label>
+        <textarea class="form-input" id="lesson-content" rows="6" placeholder="Текст урока в формате Markdown">${{isEdit ? (lesson.content_text||'') : ''}}</textarea>
+      </div>
+      
+      <div style="display:flex;gap:1rem;margin-top:var(--space-md);">
+        <button class="btn btn-primary" onclick="saveLesson(${{isEdit ? lesson.id : 'null'}})">${{isEdit ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ УРОК'}}</button>
+        <button class="btn btn-outline" onclick="closeLessonModal()">ОТМЕНА</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.classList.remove('hidden');
+}}
+
+function closeLessonModal() {{
+  const modal = document.getElementById('lesson-modal');
+  if (modal) modal.remove();
+}}
+
+async function saveLesson(lessonId) {{
+  const errorEl = document.getElementById('lesson-error');
+  const title = document.getElementById('lesson-title').value.trim();
+  const description = document.getElementById('lesson-description').value.trim();
+  const video_url = document.getElementById('lesson-video').value.trim();
+  const sort_order = parseInt(document.getElementById('lesson-order').value) || 0;
+  const content_text = document.getElementById('lesson-content').value.trim();
+  
+  if (!title) {{
+    errorEl.textContent = 'Название урока обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    let res;
+    if (lessonId) {{
+      // Update existing lesson
+      res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+        method: 'PUT',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{title, description, video_url, sort_order, content_text}})
+      }});
+    }} else {{
+      // Create new lesson
+      res = await fetch(API+'/api/admin/lessons', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{course_id: currentCourseId, title, description, video_url, sort_order, content_text}})
+      }});
+    }}
+    
+    const data = await res.json();
+    
+    if (res.ok) {{
+      closeLessonModal();
+      loadLessons(currentCourseId);
+    }} else {{
+      errorEl.textContent = data.detail || 'Ошибка сохранения';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+async function deleteLesson(lessonId) {{
+  if (!confirm('Удалить этот урок?')) return;
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+      method: 'DELETE'
+    }});
+    
+    if (res.ok) {{
+      loadLessons(currentCourseId);
+    }} else {{
+      alert('Ошибка удаления урока');
+    }}
+  }} catch(e) {{
+    alert('Ошибка соединения');
+  }}
+}}
+
+async function updateCourse(id) {{
+  const title = document.getElementById('course-title').value.trim();
+  const description = document.getElementById('course-desc').value.trim();
+  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
+  const payment_link = document.getElementById('course-payment-link').value.trim();
+  const is_published = document.getElementById('course-published').checked;
+  const errorEl = document.getElementById('course-error');
+  
+  if (!title) {{
+    errorEl.textContent = 'Название обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    const res = await fetch(API+'/api/admin/courses/'+id, {{
+      method: 'PUT',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
+    }});
+    
+    if (res.ok) {{
+      errorEl.textContent = 'Сохранено!';
+      errorEl.style.background = '#2a7a2a';
+      errorEl.classList.remove('hidden');
+      setTimeout(() => errorEl.classList.add('hidden'), 2000);
+    }} else {{
+      const data = await res.json();
+      errorEl.textContent = data.detail || 'Ошибка';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+
 
 async function updateCourse(id) {{
   const title = document.getElementById('course-title').value;
@@ -1047,13 +2046,346 @@ function logout(){{localStorage.clear();window.location.href='/';}}
 async function showSection(section){{document.querySelectorAll('.admin-nav-item').forEach((el,i)=>el.classList.toggle('active',i===(section==='courses'?0:1)));const content=document.getElementById('admin-content');if(section==='courses'){{const res=await fetch(API+'/api/courses');const data=await res.json();const courses=data.courses||[];content.innerHTML='<div class="section-header"><h2>ВСЕ КУРСЫ</h2><button class="btn btn-primary btn-sm" onclick="showSection(\\'new-course\\')">+ ДОБАВИТЬ</button></div><table class="table"><thead><tr><th>ID</th><th>Название</th><th>Цена</th><th>Статус</th><th>Действия</th></tr></thead><tbody>'+courses.map(c=>'<tr><td>'+c.id+'</td><td>'+c.title+'</td><td>'+c.price_rub+' RUB</td><td><span class="badge '+(c.is_published?'badge-success':'badge-warning')+'">'+(c.is_published?'Published':'Draft')+'</span></td><td><button class="btn btn-sm" onclick="editCourse('+c.id+')">EDIT</button></td></tr>').join('')+'</tbody></table>';}}else if(section==='new-course'){{content.innerHTML='<h2>НОВЫЙ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" placeholder="Название курса"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3" placeholder="Описание курса"></textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-payment-link" placeholder="https://payform.ru/..."></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published"> Опубликован</label></div><button class="btn btn-primary" onclick="createCourse()">СОЗДАТЬ</button></div>';}}}}
 async function createCourse(){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const payment_link=document.getElementById('course-payment-link').value;const is_published=document.getElementById('course-published').checked;if(!title){{document.getElementById('course-error').textContent='Введите название';document.getElementById('course-error').classList.remove('hidden');return;}}const res=await fetch(API+'/api/admin/courses',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,payment_link,is_published}})}});if(res.ok)showSection(\"courses\");else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}
 
+
+// Current course being edited
+let currentCourseId = null;
+let courseLessons = [];
+
 async function editCourse(id) {{
+  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
+  
   const content = document.getElementById('admin-content');
-  content.innerHTML = '<h2>РЕДАКТИРОВАТЬ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="'+course.title+'"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">'+(course.description||'')+'</textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="'+course.price_rub+'"></div><div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="'+(course.payment_link||'')+'"></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" '+(course.is_published?'checked':'')+'> Опубликован</label></div><button class="btn btn-primary" onclick="updateCourse('+id+')">СОХРАНИТЬ</button> <button class="btn btn-outline" onclick="showSection(\\"courses\\")">ОТМЕНА</button></div>';
+  content.innerHTML = `
+    <div class="course-edit-header">
+      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
+      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    </div>
+    
+    <div id="tab-info" class="tab-content">
+      <div style="max-width:600px;margin-top:var(--space-md);">
+        <div id="course-error" class="auth-error hidden"></div>
+        <div class="form-group">
+          <label class="form-label">Название курса</label>
+          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-input" id="course-desc" rows="4">${{(course.description||'')}}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Цена (руб.)</label>
+            <input type="number" class="form-input" id="course-price" value="${{course.price_rub}}">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Ссылка на оплату</label>
+            <input type="text" class="form-input" id="course-payment-link" value="${{(course.payment_link||'')}}" placeholder="https://payform.ru/...">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}>
+            Опубликован на сайте
+          </label>
+        </div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+      </div>
+    </div>
+    
+    <div id="tab-lessons" class="tab-content hidden">
+      <div class="section-header" style="margin-top:var(--space-md);">
+        <h3>Программа курса</h3>
+        <button class="btn btn-primary btn-sm" onclick="showAddLessonModal()">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list" class="lessons-list">
+        <div class="loading">Загрузка уроков...</div>
+      </div>
+    </div>
+  `;
+  
+  // Add CSS for tabs
+  addTabStyles();
+  
+  // Load lessons
+  loadLessons(id);
 }}
+
+function addTabStyles() {{
+  if (document.getElementById('tab-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'tab-styles';
+  style.textContent = `
+    .tabs {{ display: flex; gap: 0; border-bottom: 2px solid var(--color-border-dark); margin-top: var(--space-md); }}
+    .tab-btn {{ 
+      padding: 0.75rem 1.5rem; 
+      background: none; 
+      border: none; 
+      border-bottom: 2px solid transparent; 
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      transition: all 0.2s;
+    }}
+    .tab-btn:hover {{ color: var(--color-white); }}
+    .tab-btn.active {{ color: var(--color-red); border-bottom-color: var(--color-red); }}
+    .tab-content {{ padding: var(--space-md) 0; }}
+    .tab-content.hidden {{ display: none; }}
+    .course-edit-header {{ display: flex; justify-content: space-between; align-items: center; }}
+    .form-row {{ display: flex; gap: var(--space-md); }}
+    .lessons-list {{ margin-top: var(--space-md); }}
+    .lesson-item {{ 
+      display: flex; 
+      align-items: center; 
+      padding: 1rem; 
+      background: var(--color-dark-grey); 
+      border: var(--border-thin);
+      margin-bottom: 0.5rem;
+      gap: 1rem;
+    }}
+    .lesson-num {{ 
+      width: 2rem; 
+      height: 2rem; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      background: var(--color-red); 
+      color: white; 
+      font-weight: bold;
+      font-size: 0.9rem;
+    }}
+    .lesson-info {{ flex: 1; }}
+    .lesson-title {{ font-weight: 600; margin-bottom: 0.25rem; }}
+    .lesson-meta {{ font-size: 0.85rem; color: var(--color-text-muted); }}
+    .lesson-actions {{ display: flex; gap: 0.5rem; }}
+    .loading {{ text-align: center; padding: 2rem; color: var(--color-text-muted); }}
+    .empty-state {{ text-align: center; padding: 3rem; color: var(--color-text-muted); }}
+    .empty-state h4 {{ margin-bottom: 0.5rem; }}
+  `;
+  document.head.appendChild(style);
+}}
+
+function showTab(tabName, btn) {{
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+tabName).classList.remove('hidden');
+  btn.classList.add('active');
+}}
+
+async function loadLessons(courseId) {{
+  const list = document.getElementById('lessons-list');
+  const countEl = document.getElementById('lessons-count');
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+courseId);
+    const data = await res.json();
+    courseLessons = data.lessons || [];
+    
+    countEl.textContent = courseLessons.length;
+    
+    if (courseLessons.length === 0) {{
+      list.innerHTML = `
+        <div class="empty-state">
+          <h4>Уроков пока нет</h4>
+          <p>Добавьте первый урок в программу курса</p>
+        </div>
+      `;
+      return;
+    }}
+    
+    list.innerHTML = courseLessons.map((lesson, idx) => `
+      <div class="lesson-item" data-id="${{lesson.id}}">
+        <div class="lesson-num">${{idx + 1}}</div>
+        <div class="lesson-info">
+          <div class="lesson-title">${{lesson.title}}</div>
+          <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
+        </div>
+        <div class="lesson-actions">
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+        </div>
+      </div>
+    `).join('');
+  }} catch(e) {{
+    list.innerHTML = '<div class="auth-error">Ошибка загрузки уроков</div>';
+  }}
+}}
+
+function showAddLessonModal() {{
+  showLessonModal(null);
+}}
+
+async function editLesson(lessonId) {{
+  const lesson = courseLessons.find(l => l.id === lessonId);
+  if (!lesson) return;
+  showLessonModal(lesson);
+}}
+
+function showLessonModal(lesson) {{
+  const isEdit = lesson !== null;
+  const modal = document.createElement('div');
+  modal.id = 'lesson-modal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closeLessonModal()"></div>
+    <div class="modal-content" style="max-width:600px;">
+      <button class="modal-close" onclick="closeLessonModal()">X</button>
+      <h2 class="modal-title">${{isEdit ? 'РЕДАКТИРОВАТЬ УРОК' : 'НОВЫЙ УРОК'}}</h2>
+      <div id="lesson-error" class="auth-error hidden"></div>
+      
+      <div class="form-group">
+        <label class="form-label">Название урока *</label>
+        <input type="text" class="form-input" id="lesson-title" value="${{isEdit ? lesson.title : ''}}" placeholder="Название урока">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Описание / Контент</label>
+        <textarea class="form-input" id="lesson-description" rows="4" placeholder="Описание или текст урока">${{isEdit ? (lesson.description||'') : ''}}</textarea>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Видео URL</label>
+          <input type="text" class="form-input" id="lesson-video" value="${{isEdit ? (lesson.video_url||'') : ''}}" placeholder="https://youtube.com/...">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Порядковый номер</label>
+          <input type="number" class="form-input" id="lesson-order" value="${{isEdit ? (lesson.sort_order||0) : courseLessons.length}}" style="width:100px;">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Текст урока (Markdown)</label>
+        <textarea class="form-input" id="lesson-content" rows="6" placeholder="Текст урока в формате Markdown">${{isEdit ? (lesson.content_text||'') : ''}}</textarea>
+      </div>
+      
+      <div style="display:flex;gap:1rem;margin-top:var(--space-md);">
+        <button class="btn btn-primary" onclick="saveLesson(${{isEdit ? lesson.id : 'null'}})">${{isEdit ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ УРОК'}}</button>
+        <button class="btn btn-outline" onclick="closeLessonModal()">ОТМЕНА</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.classList.remove('hidden');
+}}
+
+function closeLessonModal() {{
+  const modal = document.getElementById('lesson-modal');
+  if (modal) modal.remove();
+}}
+
+async function saveLesson(lessonId) {{
+  const errorEl = document.getElementById('lesson-error');
+  const title = document.getElementById('lesson-title').value.trim();
+  const description = document.getElementById('lesson-description').value.trim();
+  const video_url = document.getElementById('lesson-video').value.trim();
+  const sort_order = parseInt(document.getElementById('lesson-order').value) || 0;
+  const content_text = document.getElementById('lesson-content').value.trim();
+  
+  if (!title) {{
+    errorEl.textContent = 'Название урока обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    let res;
+    if (lessonId) {{
+      // Update existing lesson
+      res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+        method: 'PUT',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{title, description, video_url, sort_order, content_text}})
+      }});
+    }} else {{
+      // Create new lesson
+      res = await fetch(API+'/api/admin/lessons', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{course_id: currentCourseId, title, description, video_url, sort_order, content_text}})
+      }});
+    }}
+    
+    const data = await res.json();
+    
+    if (res.ok) {{
+      closeLessonModal();
+      loadLessons(currentCourseId);
+    }} else {{
+      errorEl.textContent = data.detail || 'Ошибка сохранения';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+async function deleteLesson(lessonId) {{
+  if (!confirm('Удалить этот урок?')) return;
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+      method: 'DELETE'
+    }});
+    
+    if (res.ok) {{
+      loadLessons(currentCourseId);
+    }} else {{
+      alert('Ошибка удаления урока');
+    }}
+  }} catch(e) {{
+    alert('Ошибка соединения');
+  }}
+}}
+
+async function updateCourse(id) {{
+  const title = document.getElementById('course-title').value.trim();
+  const description = document.getElementById('course-desc').value.trim();
+  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
+  const payment_link = document.getElementById('course-payment-link').value.trim();
+  const is_published = document.getElementById('course-published').checked;
+  const errorEl = document.getElementById('course-error');
+  
+  if (!title) {{
+    errorEl.textContent = 'Название обязательно';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    const res = await fetch(API+'/api/admin/courses/'+id, {{
+      method: 'PUT',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
+    }});
+    
+    if (res.ok) {{
+      errorEl.textContent = 'Сохранено!';
+      errorEl.style.background = '#2a7a2a';
+      errorEl.classList.remove('hidden');
+      setTimeout(() => errorEl.classList.add('hidden'), 2000);
+    }} else {{
+      const data = await res.json();
+      errorEl.textContent = data.detail || 'Ошибка';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
+
+
 
 async function updateCourse(id) {{
   const title = document.getElementById('course-title').value;
@@ -1139,6 +2471,22 @@ async def admin_delete_lesson(lesson_id: int):
     delete_lesson(lesson_id)
     return {"success": True}
 
+@app.put("/api/admin/lessons/{lesson_id}")
+async def admin_update_lesson(lesson_id: int, lesson: LessonCreate):
+    success = update_lesson(
+        lesson_id,
+        title=lesson.title,
+        description=lesson.description,
+        video_url=lesson.video_url,
+        content_text=lesson.content_text,
+        sort_order=lesson.sort_order
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return {"success": True}
+
+
+
 @app.post("/api/admin/homework")
 async def admin_create_homework(hw: HomeworkCreateModel):
     hid = create_homework(
@@ -1148,32 +2496,6 @@ async def admin_create_homework(hw: HomeworkCreateModel):
         correct_answer=hw.correct_answer
     )
     return {"id": hid, "success": True}
-
-
-
-# Lesson API Endpoints
-@app.post("/api/admin/lessons")
-async def admin_create_lesson(request: Request):
-    data = await request.json()
-    lid = create_lesson(
-        course_id=data.get("course_id"),
-        title=data.get("title"),
-        description=data.get("description", ""),
-        video_url=data.get("video_url"),
-        content_text=data.get("content_text"),
-        sort_order=data.get("sort_order", 0)
-    )
-    return {"id": lid, "success": True}
-
-@app.get("/api/admin/lessons/{course_id}")
-async def admin_get_lessons(course_id: int):
-    lessons = get_lessons_by_course(course_id)
-    return {"lessons": lessons}
-
-@app.delete("/api/admin/lessons/{lesson_id}")
-async def admin_delete_lesson(lesson_id: int):
-    delete_lesson(lesson_id)
-    return {"success": True}
 
 
 
