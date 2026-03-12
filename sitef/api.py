@@ -839,7 +839,7 @@ async function updateCourse(id) {{
   }});
   
   if (res.ok) {{
-    showSection('courses');
+    showSection(\"courses\");
   }} else {{
     const data = await res.json();
     document.getElementById('course-error').textContent = data.detail || 'Ошибка';
@@ -850,7 +850,7 @@ async function updateCourse(id) {{
 async function deleteCourse(id) {{
   if (!confirm('Удалить курс?')) return;
   const res = await fetch(API+'/api/admin/courses/'+id, {{method: 'DELETE'}});
-  if (res.ok) showSection('courses');
+  if (res.ok) showSection(\"courses\");
 }}
 function scrollToCourses() {{ document.querySelector('.section-light').scrollIntoView({{behavior:'smooth'}}); }}
 init();
@@ -910,13 +910,13 @@ def get_admin_html():
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Админка - LMS</title><style>{CSS}</style></head>
 <body>
 <header class="header"><div class="container header-content"><a href="/" class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>LMS ADMIN</a><div><a href="/" class="btn btn-outline btn-sm">НА САЙТ</a> <button class="btn btn-outline btn-sm" onclick="logout()">ВЫЙТИ</button></div></div></header>
-<div class="admin-layout"><aside class="admin-sidebar"><nav class="admin-nav"><div class="admin-nav-item active" onclick="showSection('courses')">КУРСЫ</div><div class="admin-nav-item" onclick="showSection('new-course')">+ НОВЫЙ КУРС</div></nav></aside><main class="admin-content" id="admin-content"><div style="text-align:center;padding:4rem;"><div class="spinner" style="margin:0 auto;"></div></div></main></div>
+<div class="admin-layout"><aside class="admin-sidebar"><nav class="admin-nav"><div class="admin-nav-item active" onclick="showSection(\"courses\")">КУРСЫ</div><div class="admin-nav-item" onclick="showSection('new-course')">+ НОВЫЙ КУРС</div></nav></aside><main class="admin-content" id="admin-content"><div style="text-align:center;padding:4rem;"><div class="spinner" style="margin:0 auto;"></div></div></main></div>
 <script>
 const API=window.location.origin;
-function init(){{if(!localStorage.getItem('lms_admin')){{window.location.href='/';return;}}showSection('courses');}}
+function init(){{if(!localStorage.getItem('lms_admin')){{window.location.href='/';return;}}showSection(\"courses\");}}
 function logout(){{localStorage.clear();window.location.href='/';}}
 async function showSection(section){{document.querySelectorAll('.admin-nav-item').forEach((el,i)=>el.classList.toggle('active',i===(section==='courses'?0:1)));const content=document.getElementById('admin-content');if(section==='courses'){{const res=await fetch(API+'/api/courses');const data=await res.json();const courses=data.courses||[];content.innerHTML='<div class="section-header"><h2>ВСЕ КУРСЫ</h2><button class="btn btn-primary btn-sm" onclick="showSection(\\'new-course\\')">+ ДОБАВИТЬ</button></div><table class="table"><thead><tr><th>ID</th><th>Название</th><th>Цена</th><th>Статус</th><th>Действия</th></tr></thead><tbody>'+courses.map(c=>'<tr><td>'+c.id+'</td><td>'+c.title+'</td><td>'+c.price_rub+' RUB</td><td><span class="badge '+(c.is_published?'badge-success':'badge-warning')+'">'+(c.is_published?'Published':'Draft')+'</span></td><td><button class="btn btn-sm" onclick="editCourse('+c.id+')">EDIT</button></td></tr>').join('')+'</tbody></table>';}}else if(section==='new-course'){{content.innerHTML='<h2>НОВЫЙ КУРС</h2><div style="max-width:500px;margin-top:var(--space-md);"><div id="course-error" class="auth-error hidden"></div><div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" placeholder="Название курса"></div><div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3" placeholder="Описание курса"></textarea></div><div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-payment-link" placeholder="https://payform.ru/..."></div><div class="form-group"><label class="form-label"><input type="checkbox" id="course-published"> Опубликован</label></div><button class="btn btn-primary" onclick="createCourse()">СОЗДАТЬ</button></div>';}}}}
-async function createCourse(){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const payment_link=document.getElementById('course-payment-link').value;const is_published=document.getElementById('course-published').checked;if(!title){{document.getElementById('course-error').textContent='Введите название';document.getElementById('course-error').classList.remove('hidden');return;}}const res=await fetch(API+'/api/admin/courses',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,payment_link,is_published}})}});if(res.ok)showSection('courses');else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}
+async function createCourse(){{const title=document.getElementById('course-title').value;const description=document.getElementById('course-desc').value;const price_rub=parseInt(document.getElementById('course-price').value)||0;const payment_link=document.getElementById('course-payment-link').value;const is_published=document.getElementById('course-published').checked;if(!title){{document.getElementById('course-error').textContent='Введите название';document.getElementById('course-error').classList.remove('hidden');return;}}const res=await fetch(API+'/api/admin/courses',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,description,price_rub,payment_link,is_published}})}});if(res.ok)showSection(\"courses\");else{{const data=await res.json();document.getElementById('course-error').textContent=data.detail||'Ошибка';document.getElementById('course-error').classList.remove('hidden');}}}}
 init();
 </script>
 
