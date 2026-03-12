@@ -853,19 +853,19 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal(${{id}})\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', '+id+'')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', '+id+'')">УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -894,7 +894,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -1008,8 +1008,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
@@ -1288,19 +1288,19 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal(${{id}})\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', '+id+'')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', '+id+'')">УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -1329,7 +1329,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -1443,8 +1443,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
@@ -1721,19 +1721,19 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal(${{id}})\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', '+id+'')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', '+id+'')">УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -1762,7 +1762,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -1876,8 +1876,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
@@ -2226,19 +2226,19 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal(${{id}})\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', '+id+'')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', '+id+'')">УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -2267,7 +2267,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse(${{id}})\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -2378,8 +2378,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
