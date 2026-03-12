@@ -22,7 +22,8 @@ from database import (
     create_course, create_lesson, create_homework, create_user,
     authenticate_user, get_purchased_course_ids, user_has_course_access,
     purchase_course, update_course, delete_course,
-    get_lessons_by_course, get_homework_by_lesson, delete_lesson
+    get_lessons_by_course, get_homework_by_lesson, delete_lesson,
+    update_lesson
 )
 from prodamus_integration import generate_payment_link, generate_order_id
 
@@ -2051,6 +2052,11 @@ async function createCourse(){{const title=document.getElementById('course-title
 let currentCourseId = null;
 let courseLessons = [];
 
+
+// Current course being edited
+let currentCourseId = null;
+let courseLessons = [];
+
 async function editCourse(id) {{
   currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
@@ -2061,7 +2067,7 @@ async function editCourse(id) {{
   content.innerHTML = `
     <div class="course-edit-header">
       <h2>РЕДАКТИРОВАТЬ КУРС</h2>
-      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\\"courses\\")">← НАЗАД</button>
     </div>
     
     <div class="tabs">
@@ -2111,10 +2117,7 @@ async function editCourse(id) {{
     </div>
   `;
   
-  // Add CSS for tabs
   addTabStyles();
-  
-  // Load lessons
   loadLessons(id);
 }}
 
@@ -2299,15 +2302,13 @@ async function saveLesson(lessonId) {{
   
   try {{
     let res;
-    if (lessonId) {{
-      // Update existing lesson
+    if (lessonId && lessonId !== 'null') {{
       res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
         method: 'PUT',
         headers: {{'Content-Type': 'application/json'}},
         body: JSON.stringify({{title, description, video_url, sort_order, content_text}})
       }});
     }} else {{
-      // Create new lesson
       res = await fetch(API+'/api/admin/lessons', {{
         method: 'POST',
         headers: {{'Content-Type': 'application/json'}},
@@ -2377,39 +2378,17 @@ async function updateCourse(id) {{
     }} else {{
       const data = await res.json();
       errorEl.textContent = data.detail || 'Ошибка';
+      errorEl.style.background = '';
       errorEl.classList.remove('hidden');
     }}
   }} catch(e) {{
     errorEl.textContent = 'Ошибка соединения';
+    errorEl.style.background = '';
     errorEl.classList.remove('hidden');
   }}
 }}
 
 
-
-async function updateCourse(id) {{
-  const title = document.getElementById('course-title').value;
-  const description = document.getElementById('course-desc').value;
-  const price_rub = parseInt(document.getElementById('course-price').value) || 0;
-  const payment_link = document.getElementById('course-payment-link').value;
-  const is_published = document.getElementById('course-published').checked;
-  
-  const res = await fetch(API+'/api/admin/courses/'+id, {{
-    method: 'PUT',
-    headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{title, description, price_rub, payment_link, is_published}})
-  }});
-  
-  if (res.ok) {{
-    showSection("courses");
-  }} else {{
-    const data = await res.json();
-    document.getElementById('course-error').textContent = data.detail || 'Ошибка';
-    document.getElementById('course-error').classList.remove('hidden');
-  }}
-}}
-
-init();
 </script>
 
 <!-- Payment Modal -->
