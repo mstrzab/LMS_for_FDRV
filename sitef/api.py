@@ -853,14 +853,14 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
@@ -894,7 +894,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -1288,14 +1288,14 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
@@ -1329,7 +1329,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -1721,14 +1721,14 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
@@ -1762,7 +1762,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
@@ -2226,14 +2226,14 @@ async function editCourse(id) {{
         <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
         <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
         <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ</button>
       </div>
     </div>
     
     <!-- Tab Content: Lessons -->
     <div id="content-lessons" class="tab-content" style="display:none;">
       <div style="margin-bottom:var(--space-md);">
-        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+        <button class="btn btn-primary" onclick=\"showAddLessonModal('+id+')\">+ ДОБАВИТЬ УРОК</button>
       </div>
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
@@ -2267,7 +2267,7 @@ async function editCourse(id) {{
             Опубликован на сайте
           </label>
         </div>
-        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+        <button class="btn btn-primary" onclick=\"updateCourse('+id+')\">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
       </div>
     </div>
     
