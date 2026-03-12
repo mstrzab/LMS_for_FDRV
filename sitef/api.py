@@ -1141,6 +1141,43 @@ async function deleteLesson(lessonId) {{
     }} else {{
       alert('Ошибка удаления урока');
     }}
+
+
+async function updateLesson(lessonId) {{
+  const title = document.getElementById('lesson-title').value.trim();
+  const description = document.getElementById('lesson-desc').value.trim();
+  const video_url = document.getElementById('lesson-video').value.trim();
+  const content_text = document.getElementById('lesson-content').value.trim();
+  const sort_order = parseInt(document.getElementById('lesson-order').value) || 0;
+  
+  const errorEl = document.getElementById('lesson-error');
+  
+  if (!title) {{
+    errorEl.textContent = 'Введите название урока';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+      method: 'PUT',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{title, description, video_url, content_text, sort_order}})
+    }});
+    
+    if (res.ok) {{
+      closeLessonModal();
+      loadLessons(currentCourseId);
+    }} else {{
+      const data = await res.json();
+      errorEl.textContent = data.detail || 'Ошибка сохранения';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
   }} catch(e) {{
     alert('Ошибка соединения');
   }}
@@ -2472,6 +2509,43 @@ async function deleteLesson(lessonId) {{
     }} else {{
       alert('Ошибка удаления урока');
     }}
+
+
+async function updateLesson(lessonId) {{
+  const title = document.getElementById('lesson-title').value.trim();
+  const description = document.getElementById('lesson-desc').value.trim();
+  const video_url = document.getElementById('lesson-video').value.trim();
+  const content_text = document.getElementById('lesson-content').value.trim();
+  const sort_order = parseInt(document.getElementById('lesson-order').value) || 0;
+  
+  const errorEl = document.getElementById('lesson-error');
+  
+  if (!title) {{
+    errorEl.textContent = 'Введите название урока';
+    errorEl.classList.remove('hidden');
+    return;
+  }}
+  
+  try {{
+    const res = await fetch(API+'/api/admin/lessons/'+lessonId, {{
+      method: 'PUT',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{title, description, video_url, content_text, sort_order}})
+    }});
+    
+    if (res.ok) {{
+      closeLessonModal();
+      loadLessons(currentCourseId);
+    }} else {{
+      const data = await res.json();
+      errorEl.textContent = data.detail || 'Ошибка сохранения';
+      errorEl.classList.remove('hidden');
+    }}
+  }} catch(e) {{
+    errorEl.textContent = 'Ошибка соединения';
+    errorEl.classList.remove('hidden');
+  }}
+}}
   }} catch(e) {{
     alert('Ошибка соединения');
   }}
