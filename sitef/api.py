@@ -1008,8 +1008,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
@@ -1443,8 +1443,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
@@ -1876,8 +1876,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
@@ -2378,8 +2378,8 @@ async function loadLessons(courseId) {{
           <div class="lesson-meta">${{(lesson.description||'').substring(0,80)}}${{(lesson.description||'').length > 80 ? '...' : ''}}</div>
         </div>
         <div class="lesson-actions">
-          <button class="btn btn-outline btn-sm" onclick="editLesson(${{lesson.id}})">ИЗМЕНИТЬ</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteLesson(${{lesson.id}})" style="color:var(--color-red);">УДАЛИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="editLesson('+lesson.id+')">ИЗМЕНИТЬ</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteLesson('+lesson.id+')" style="color:var(--color-red);">УДАЛИТЬ</button>
         </div>
       </div>
     `).join('');
