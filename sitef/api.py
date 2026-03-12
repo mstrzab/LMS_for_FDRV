@@ -57,7 +57,9 @@ async def add_cache_headers(request, call_next):
     if "/static/" in str(request.url):
         response.headers["Cache-Control"] = "public, max-age=86400"
     elif "text/html" in response.headers.get("content-type", ""):
-        response.headers["Cache-Control"] = "public, max-age=3600"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
 
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -736,6 +738,7 @@ async function loadCourses() {{
     const res = await fetch(API + '/api/courses');
     const data = await res.json();
     courses = data.courses || [];
+    console.log('Loaded courses:', courses.length, courses);
     render();
   }} catch (e) {{
     document.getElementById('courses-grid').innerHTML = '<p>Ошибка загрузки</p>';
@@ -1012,6 +1015,17 @@ async def admin_delete_lesson(lesson_id: int):
     delete_lesson(lesson_id)
     return {"success": True}
 
+
+
+# HEAD endpoints for browser compatibility
+@app.head("/")
+async def head_main():
+    return Response(content=b"", media_type="text/html")
+
+@app.head("/api/courses")
+async def head_courses():
+    return Response(content=b"", media_type="application/json")
+
 @app.get("/")
 async def root():
     return HTMLResponse(content=get_main_html())
@@ -1094,6 +1108,7 @@ async def webhook(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
