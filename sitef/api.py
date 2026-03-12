@@ -2429,6 +2429,14 @@ init();
 
 # Routes
 
+
+class LessonUpdate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    video_url: Optional[str] = ""
+    content_text: Optional[str] = ""
+    sort_order: Optional[int] = 0
+
 class LessonCreate(BaseModel):
     course_id: int
     title: str
@@ -2472,7 +2480,7 @@ async def admin_delete_lesson(lesson_id: int):
     return {"success": True}
 
 @app.put("/api/admin/lessons/{lesson_id}")
-async def admin_update_lesson(lesson_id: int, lesson: LessonCreate):
+async def admin_update_lesson(lesson_id: int, lesson: LessonUpdate):
     success = update_lesson(
         lesson_id,
         title=lesson.title,
