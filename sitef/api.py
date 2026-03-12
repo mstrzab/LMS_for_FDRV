@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import Response, FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -1020,8 +1020,8 @@ async def admin_delete_lesson(lesson_id: int):
 # HEAD endpoints for browser compatibility
 
 
-@app.get("/")
-async def root():
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root(request: Request):
     if request.method == "HEAD":
         return Response(content=b"", media_type="text/html")
     return HTMLResponse(content=get_main_html())
