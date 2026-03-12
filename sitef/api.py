@@ -1018,20 +1018,16 @@ async def admin_delete_lesson(lesson_id: int):
 
 
 # HEAD endpoints for browser compatibility
-@app.head("/")
-async def head_main():
-    return Response(content=b"", media_type="text/html")
 
-@app.head("/api/courses")
-async def head_courses():
-    return Response(content=b"", media_type="application/json")
 
 @app.get("/")
 async def root():
+    if request.method == "HEAD":
+        return Response(content=b"", media_type="text/html")
     return HTMLResponse(content=get_main_html())
 
 
-@app.get("/api/courses")
+@app.api_route("/api/courses", methods=["GET", "HEAD"])
 async def api_courses():
     courses = get_all_courses(published_only=True)
     return {"courses": courses}
