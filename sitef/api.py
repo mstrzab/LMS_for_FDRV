@@ -822,29 +822,57 @@ let currentCourseId = null;
 let courseLessons = [];
 
 async function editCourse(id) {{
-  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
   
+  // Load lessons for this course
+  const lessonsRes = await fetch(API+'/api/admin/lessons/'+id);
+  const lessonsData = await lessonsRes.json();
+  const lessons = lessonsData.lessons || [];
+  
   const content = document.getElementById('admin-content');
   content.innerHTML = `
-    <div class="course-edit-header">
-      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
-      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-md);">
+      <h2 style="margin:0;">РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД</button>
     </div>
     
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
-      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:2px solid var(--color-border-dark);margin-bottom:var(--space-lg);">
+      <div id="tab-info" class="admin-tab active" onclick="switchTab('info')">ИНФОРМАЦИЯ</div>
+      <div id="tab-lessons" class="admin-tab" onclick="switchTab('lessons')">ПРОГРАММА КУРСА</div>
     </div>
     
-    <div id="tab-info" class="tab-content">
-      <div style="max-width:600px;margin-top:var(--space-md);">
+    <!-- Tab Content: Info -->
+    <div id="content-info" class="tab-content">
+      <div style="max-width:500px;">
         <div id="course-error" class="auth-error hidden"></div>
-        <div class="form-group">
-          <label class="form-label">Название курса</label>
-          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        <div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="${{course.title}}"></div>
+        <div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">${{course.description||''}}</textarea></div>
+        <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
+        <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
+        <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Lessons -->
+    <div id="content-lessons" class="tab-content" style="display:none;">
+      <div style="margin-bottom:var(--space-md);">
+        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list">
+        ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
+          '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
+          '</tbody></table>'
+        }}
+      </div>
+    </div>
+  `;
+  window.currentCourseId = id;
+}}">
         </div>
         <div class="form-group">
           <label class="form-label">Описание</label>
@@ -1192,29 +1220,57 @@ let currentCourseId = null;
 let courseLessons = [];
 
 async function editCourse(id) {{
-  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
   
+  // Load lessons for this course
+  const lessonsRes = await fetch(API+'/api/admin/lessons/'+id);
+  const lessonsData = await lessonsRes.json();
+  const lessons = lessonsData.lessons || [];
+  
   const content = document.getElementById('admin-content');
   content.innerHTML = `
-    <div class="course-edit-header">
-      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
-      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-md);">
+      <h2 style="margin:0;">РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД</button>
     </div>
     
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
-      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:2px solid var(--color-border-dark);margin-bottom:var(--space-lg);">
+      <div id="tab-info" class="admin-tab active" onclick="switchTab('info')">ИНФОРМАЦИЯ</div>
+      <div id="tab-lessons" class="admin-tab" onclick="switchTab('lessons')">ПРОГРАММА КУРСА</div>
     </div>
     
-    <div id="tab-info" class="tab-content">
-      <div style="max-width:600px;margin-top:var(--space-md);">
+    <!-- Tab Content: Info -->
+    <div id="content-info" class="tab-content">
+      <div style="max-width:500px;">
         <div id="course-error" class="auth-error hidden"></div>
-        <div class="form-group">
-          <label class="form-label">Название курса</label>
-          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        <div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="${{course.title}}"></div>
+        <div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">${{course.description||''}}</textarea></div>
+        <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
+        <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
+        <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Lessons -->
+    <div id="content-lessons" class="tab-content" style="display:none;">
+      <div style="margin-bottom:var(--space-md);">
+        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list">
+        ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
+          '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
+          '</tbody></table>'
+        }}
+      </div>
+    </div>
+  `;
+  window.currentCourseId = id;
+}}">
         </div>
         <div class="form-group">
           <label class="form-label">Описание</label>
@@ -1547,6 +1603,14 @@ async function updateCourse(id) {{
     document.getElementById('course-error').textContent = data.detail || 'Ошибка';
     document.getElementById('course-error').classList.remove('hidden');
   }}
+}}
+
+
+function switchTab(tab) {{
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('content-'+tab).style.display = 'block';
 }}
 
 init();
@@ -1589,29 +1653,57 @@ let currentCourseId = null;
 let courseLessons = [];
 
 async function editCourse(id) {{
-  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
   
+  // Load lessons for this course
+  const lessonsRes = await fetch(API+'/api/admin/lessons/'+id);
+  const lessonsData = await lessonsRes.json();
+  const lessons = lessonsData.lessons || [];
+  
   const content = document.getElementById('admin-content');
   content.innerHTML = `
-    <div class="course-edit-header">
-      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
-      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД К СПИСКУ</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-md);">
+      <h2 style="margin:0;">РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД</button>
     </div>
     
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
-      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:2px solid var(--color-border-dark);margin-bottom:var(--space-lg);">
+      <div id="tab-info" class="admin-tab active" onclick="switchTab('info')">ИНФОРМАЦИЯ</div>
+      <div id="tab-lessons" class="admin-tab" onclick="switchTab('lessons')">ПРОГРАММА КУРСА</div>
     </div>
     
-    <div id="tab-info" class="tab-content">
-      <div style="max-width:600px;margin-top:var(--space-md);">
+    <!-- Tab Content: Info -->
+    <div id="content-info" class="tab-content">
+      <div style="max-width:500px;">
         <div id="course-error" class="auth-error hidden"></div>
-        <div class="form-group">
-          <label class="form-label">Название курса</label>
-          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        <div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="${{course.title}}"></div>
+        <div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">${{course.description||''}}</textarea></div>
+        <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
+        <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
+        <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Lessons -->
+    <div id="content-lessons" class="tab-content" style="display:none;">
+      <div style="margin-bottom:var(--space-md);">
+        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list">
+        ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
+          '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
+          '</tbody></table>'
+        }}
+      </div>
+    </div>
+  `;
+  window.currentCourseId = id;
+}}">
         </div>
         <div class="form-group">
           <label class="form-label">Описание</label>
@@ -1944,6 +2036,14 @@ async function updateCourse(id) {{
     document.getElementById('course-error').textContent = data.detail || 'Ошибка';
     document.getElementById('course-error').classList.remove('hidden');
   }}
+}}
+
+
+function switchTab(tab) {{
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('content-'+tab).style.display = 'block';
 }}
 
 init();
@@ -2058,29 +2158,57 @@ let currentCourseId = null;
 let courseLessons = [];
 
 async function editCourse(id) {{
-  currentCourseId = id;
   const res = await fetch(API+'/api/courses/'+id);
   const course = await res.json();
   if (!course) return;
   
+  // Load lessons for this course
+  const lessonsRes = await fetch(API+'/api/admin/lessons/'+id);
+  const lessonsData = await lessonsRes.json();
+  const lessons = lessonsData.lessons || [];
+  
   const content = document.getElementById('admin-content');
   content.innerHTML = `
-    <div class="course-edit-header">
-      <h2>РЕДАКТИРОВАТЬ КУРС</h2>
-      <button class="btn btn-outline btn-sm" onclick="showSection(\\"courses\\")">← НАЗАД</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-md);">
+      <h2 style="margin:0;">РЕДАКТИРОВАТЬ КУРС</h2>
+      <button class="btn btn-outline btn-sm" onclick="showSection(\"courses\")">← НАЗАД</button>
     </div>
     
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('info', this)">ИНФОРМАЦИЯ</button>
-      <button class="tab-btn" onclick="showTab('lessons', this)">УРОКИ <span class="badge" id="lessons-count">0</span></button>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:2px solid var(--color-border-dark);margin-bottom:var(--space-lg);">
+      <div id="tab-info" class="admin-tab active" onclick="switchTab('info')">ИНФОРМАЦИЯ</div>
+      <div id="tab-lessons" class="admin-tab" onclick="switchTab('lessons')">ПРОГРАММА КУРСА</div>
     </div>
     
-    <div id="tab-info" class="tab-content">
-      <div style="max-width:600px;margin-top:var(--space-md);">
+    <!-- Tab Content: Info -->
+    <div id="content-info" class="tab-content">
+      <div style="max-width:500px;">
         <div id="course-error" class="auth-error hidden"></div>
-        <div class="form-group">
-          <label class="form-label">Название курса</label>
-          <input type="text" class="form-input" id="course-title" value="${{course.title}}">
+        <div class="form-group"><label class="form-label">Название</label><input type="text" class="form-input" id="course-title" value="${{course.title}}"></div>
+        <div class="form-group"><label class="form-label">Описание</label><textarea class="form-input" id="course-desc" rows="3">${{course.description||''}}</textarea></div>
+        <div class="form-group"><label class="form-label">Цена (руб.)</label><input type="number" class="form-input" id="course-price" value="${{course.price_rub}}"></div>
+        <div class="form-group"><label class="form-label">Ссылка на оплату</label><input type="text" class="form-input" id="course-payment-link" value="${{course.payment_link||''}}"></div>
+        <div class="form-group"><label class="form-label"><input type="checkbox" id="course-published" ${{course.is_published?'checked':''}}> Опубликован</label></div>
+        <button class="btn btn-primary" onclick="updateCourse(${{id}})">СОХРАНИТЬ</button>
+      </div>
+    </div>
+    
+    <!-- Tab Content: Lessons -->
+    <div id="content-lessons" class="tab-content" style="display:none;">
+      <div style="margin-bottom:var(--space-md);">
+        <button class="btn btn-primary" onclick="showAddLessonModal(${{id}})">+ ДОБАВИТЬ УРОК</button>
+      </div>
+      <div id="lessons-list">
+        ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
+          '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson('+l.id+', ${{id}}')">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson('+l.id+', ${{id}}')">УДАЛИТЬ</button></td></tr>').join('') +
+          '</tbody></table>'
+        }}
+      </div>
+    </div>
+  `;
+  window.currentCourseId = id;
+}}">
         </div>
         <div class="form-group">
           <label class="form-label">Описание</label>
