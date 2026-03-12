@@ -865,7 +865,7 @@ async function editCourse(id) {{
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}")>ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}")>УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}})">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}})">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -1300,7 +1300,7 @@ async function editCourse(id) {{
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}")>ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}")>УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}})">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}})">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -1733,7 +1733,7 @@ async function editCourse(id) {{
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}")>ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}")>УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}})">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}})">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
@@ -2238,7 +2238,7 @@ async function editCourse(id) {{
       <div id="lessons-list">
         ${{lessons.length === 0 ? '<p style="color:var(--color-text-muted);">Нет уроков. Нажмите кнопку выше для добавления.</p>' : 
           '<table class="table"><thead><tr><th>#</th><th>Название</th><th>Действия</th></tr></thead><tbody>' +
-          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}}")>ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}}")>УДАЛИТЬ</button></td></tr>').join('') +
+          lessons.map((l, i) => '<tr><td>'+(i+1)+'</td><td>'+l.title+'</td><td><button class="btn btn-sm" onclick="editLesson(${{l.id}}, ${{id}})">ИЗМЕНИТЬ</button> <button class="btn btn-sm btn-outline" onclick="deleteLesson(${{l.id}}, ${{id}})">УДАЛИТЬ</button></td></tr>').join('') +
           '</tbody></table>'
         }}
       </div>
